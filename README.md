@@ -120,25 +120,6 @@ Leave blank and the UI gracefully skips those panels.
 
 ---
 
-## What the judges should look at
-
-1. **Honest Performance Card** (dashboard). Three scenarios, same held-out
-   110 claims, lexicon features progressively stripped. Makes the
-   "100% is data-artifact, 77% is real" tradeoff explicit.
-2. **Live threshold slider**. Drag it; the confusion matrix and ROI
-   calculator update live. Proves we understand precision/recall and
-   translates the choice into dollars.
-3. **Fairness audit**. Per-group recall across state, age bucket, policy
-   type. Transparent — disparities shown as signed `pp` deltas.
-4. **Drift monitor**. PSI per feature, colour-coded to the industry
-   thresholds (< 0.10 stable, 0.10–0.25 moderate, > 0.25 significant).
-5. **Single-claim view** (`/claim?id=...`): time-to-escalation, similar
-   past claims, adjuster-feedback buttons (writes to SQLite), and the
-   **Audit Trail panel** — score construction, SHAP drivers, LLM
-   citation-grounding status.
-
----
-
 ## Grounding the LLMs
 
 Both Gemini and Llama are called with `temperature=0` and prompted with

@@ -4,7 +4,13 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+function resolveApiBase(): string {
+  const env = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (env && env.length > 0) return env.replace(/\/$/, "");
+  if (typeof window !== "undefined") return "";
+  return "http://127.0.0.1:8000";
+}
+const API_BASE = resolveApiBase();
 
 // DEMO_HIDE: flip to `false` to un-hide the Audit Trail panel.
 // Typed as `boolean` so TypeScript keeps the runtime checks inside the block.

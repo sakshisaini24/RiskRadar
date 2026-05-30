@@ -1,0 +1,55 @@
+# RiskRadar — single container: FastAPI + Next.js + nginx on $PORT
+# Suitable for Render "Web Service" → Docker (free tier).
+
+# ── 1. Build Next.js ─────────────────────────────────────────────────────────
+FROM node:20-slim AS frontend-build
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+# Same-origin API: browser calls /claims, nginx proxies to FastAPI
+ENV NEXT_PUBLIC_API_BASE_URL=
+RUN npm run build
+
+# ── 2. Python dependencies ───────────────────────────────────────────────────
+FROM python:3.11-slim AS python-deps
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+COPY requirements-docker.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements-docker.txt
+
+# ── 3. Final image ───────────────────────────────────────────────────────────
+FROM python:3.11-slim
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nginx gettext-base wget libgomp1 \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=python-deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=python-deps /usr/local/bin /usr/local/bin
+
+# App code + trained artifacts (data/, models/)
+COPY api/ api/
+COPY models/ models/
+COPY data/ data/
+COPY pipeline/ pipeline/
+
+# Next.js standalone server
+COPY --from=frontend-build /app/frontend/.next/standalone /app/frontend
+COPY --from=frontend-build /app/frontend/.next/static /app/frontend/.next/static
+COPY --from=frontend-build /app/frontend/public /app/frontend/public
+
+COPY docker/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY docker/start.sh /start.sh
+RUN chmod +x /start.sh
+
+ENV PYTHONUNBUFFERED=1
+EXPOSE 10000
+
+CMD ["/start.sh"]

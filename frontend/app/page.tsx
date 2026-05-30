@@ -3,7 +3,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+/** Empty env = same origin (Docker/nginx). Local dev defaults to :8000. */
+function resolveApiBase(): string {
+  const env = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (env && env.length > 0) return env.replace(/\/$/, "");
+  if (typeof window !== "undefined") return "";
+  return "http://127.0.0.1:8000";
+}
+const API_BASE = resolveApiBase();
 
 // DEMO_HIDE: flip to `false` to un-hide the ML-ops panels
 // (Honest Performance Card + Data Drift Monitor).
