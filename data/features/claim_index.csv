@@ -1,0 +1,551 @@
+claim_id,target_outcome,days_open,total_claimed,incident_type,policy_type,approved_amount
+CLM-2024-10000,Resolved,106,37938.61,Flood Damage,Health,0.0
+CLM-2023-10001,Resolved,326,17178.21,Slip & Fall,Auto,15363.13
+CLM-2023-10002,Escalated,278,333692.11,Vehicle Theft,Liability,0.0
+CLM-2022-10003,Resolved,224,213793.11,Vehicle Theft,Liability,0.0
+CLM-2022-10004,Resolved,398,57486.56,Workplace Injury,Workers Comp,47333.0
+CLM-2024-10005,Resolved,5,172590.99,Premises Liability,Life,134270.08
+CLM-2022-10006,Escalated,107,991426.11,Water Damage,Auto,0.0
+CLM-2022-10007,Resolved,114,348909.82,Hail Storm,Life,0.0
+CLM-2023-10008,Resolved,241,31324.21,Workplace Injury,Property,0.0
+CLM-2022-10009,Resolved,379,49040.82,Workplace Injury,Health,0.0
+CLM-2022-10010,Resolved,125,34694.46,Medical Negligence,Workers Comp,30961.99
+CLM-2024-10011,Escalated,323,86314.79,Flood Damage,Property,0.0
+CLM-2022-10012,Escalated,149,840519.02,Construction Defect,Life,0.0
+CLM-2022-10013,Resolved,23,2437.87,Rear-end Collision,Auto,1039.17
+CLM-2023-10014,Escalated,175,51974.86,Flood Damage,Workers Comp,0.0
+CLM-2022-10015,Resolved,209,81905.85,Medical Negligence,Liability,0.0
+CLM-2022-10016,Resolved,384,73846.32,Hit & Run,Liability,63347.17
+CLM-2022-10017,Resolved,159,192701.32,Workplace Injury,Workers Comp,58183.75
+CLM-2023-10018,Resolved,130,132592.11,Water Damage,Liability,0.0
+CLM-2024-10019,Resolved,73,9517.46,Workplace Injury,Liability,0.0
+CLM-2024-10020,Escalated,281,2500000.0,Vehicle Theft,Liability,0.0
+CLM-2023-10021,Resolved,219,35103.77,Rear-end Collision,Liability,33347.42
+CLM-2023-10022,Resolved,98,176242.04,Product Liability,Workers Comp,59843.33
+CLM-2023-10023,Resolved,131,11838.72,Commercial Vehicle Crash,Property,0.0
+CLM-2022-10024,Resolved,43,78161.35,Hit & Run,Health,0.0
+CLM-2024-10025,Resolved,380,50839.69,Product Liability,Liability,0.0
+CLM-2024-10026,Resolved,179,45108.96,Vehicle Theft,Auto,41739.14
+CLM-2022-10027,Escalated,288,408172.46,Hail Storm,Liability,0.0
+CLM-2023-10028,Resolved,104,240977.99,Slip & Fall,Property,72566.62
+CLM-2024-10029,Resolved,256,5804.18,Commercial Vehicle Crash,Auto,0.0
+CLM-2024-10030,Escalated,317,471697.82,Water Damage,Life,0.0
+CLM-2024-10031,Resolved,306,863038.43,Construction Defect,Liability,178983.94
+CLM-2022-10032,Resolved,25,812841.75,Construction Defect,Life,0.0
+CLM-2024-10033,Resolved,214,281156.86,Rear-end Collision,Life,257970.8
+CLM-2023-10034,Resolved,260,19771.49,Vandalism,Auto,0.0
+CLM-2023-10035,Escalated,371,8014.48,Construction Defect,Health,0.0
+CLM-2024-10036,Escalated,81,1509942.41,Construction Defect,Life,0.0
+CLM-2023-10037,Resolved,56,17374.41,Workplace Injury,Life,0.0
+CLM-2024-10038,Resolved,152,20300.27,Hit & Run,Property,17427.64
+CLM-2022-10039,Resolved,200,17384.95,Water Damage,Property,0.0
+CLM-2023-10040,Resolved,252,101390.13,Premises Liability,Liability,0.0
+CLM-2023-10041,Escalated,391,529905.27,Hit & Run,Auto,0.0
+CLM-2024-10042,Escalated,178,633478.16,Medical Negligence,Property,139604.97
+CLM-2024-10043,Escalated,317,35902.57,Vehicle Theft,Auto,0.0
+CLM-2023-10044,Resolved,217,11119.64,Vandalism,Property,6888.91
+CLM-2023-10045,Resolved,30,9060.31,Product Liability,Auto,0.0
+CLM-2024-10046,Resolved,13,145028.54,Rear-end Collision,Life,135663.98
+CLM-2023-10047,Escalated,369,455679.84,Vandalism,Auto,0.0
+CLM-2024-10048,Escalated,374,357463.69,Hit & Run,Liability,288517.31
+CLM-2024-10049,Resolved,305,4278.0,Vehicle Theft,Workers Comp,0.0
+CLM-2024-10050,Resolved,193,196726.58,Hit & Run,Property,187245.41
+CLM-2022-10051,Resolved,237,31393.69,Medical Negligence,Property,0.0
+CLM-2024-10052,Resolved,162,32056.93,Product Liability,Liability,0.0
+CLM-2022-10053,Resolved,384,27437.24,Medical Negligence,Property,4372.69
+CLM-2023-10054,Resolved,207,48320.14,Workplace Injury,Auto,45651.88
+CLM-2024-10055,Resolved,294,42763.29,Slip & Fall,Health,36773.89
+CLM-2023-10056,Resolved,383,11918.1,Vehicle Theft,Auto,0.0
+CLM-2022-10057,Resolved,178,31758.51,Slip & Fall,Workers Comp,17296.11
+CLM-2024-10058,Resolved,334,107072.87,Commercial Vehicle Crash,Workers Comp,0.0
+CLM-2023-10059,Escalated,274,343241.98,Medical Negligence,Health,183000.77
+CLM-2022-10060,Resolved,104,15938.62,Construction Defect,Health,9938.77
+CLM-2023-10061,Resolved,267,36687.56,Water Damage,Health,0.0
+CLM-2023-10062,Resolved,361,63888.78,Workplace Injury,Health,0.0
+CLM-2022-10063,Resolved,13,72428.12,Slip & Fall,Liability,0.0
+CLM-2024-10064,Resolved,39,109995.66,Product Liability,Health,102651.83
+CLM-2022-10065,Escalated,163,2299987.69,Vandalism,Workers Comp,969480.11
+CLM-2023-10066,Escalated,47,177840.13,Slip & Fall,Property,0.0
+CLM-2022-10067,Escalated,34,732295.97,Vandalism,Property,0.0
+CLM-2024-10068,Escalated,276,178625.49,Flood Damage,Auto,0.0
+CLM-2024-10069,Resolved,49,73773.79,Slip & Fall,Life,23881.51
+CLM-2023-10070,Resolved,49,119604.57,Hail Storm,Property,60814.95
+CLM-2023-10071,Escalated,68,247824.36,Product Liability,Property,0.0
+CLM-2022-10072,Escalated,293,227377.94,Fire Damage,Property,141946.01
+CLM-2024-10073,Escalated,109,628955.96,Premises Liability,Liability,0.0
+CLM-2022-10074,Resolved,86,1120.77,Medical Negligence,Auto,0.0
+CLM-2023-10075,Resolved,279,174991.55,Workplace Injury,Auto,169849.24
+CLM-2023-10076,Escalated,192,154305.18,Hail Storm,Property,0.0
+CLM-2024-10077,Resolved,277,103638.12,Hit & Run,Health,85496.02
+CLM-2022-10078,Resolved,298,165931.02,Vandalism,Life,125233.84
+CLM-2024-10079,Resolved,180,79282.16,Commercial Vehicle Crash,Liability,76659.0
+CLM-2022-10080,Resolved,207,27486.89,Water Damage,Property,0.0
+CLM-2023-10081,Escalated,120,403317.68,Flood Damage,Health,0.0
+CLM-2024-10082,Resolved,94,228685.1,Product Liability,Liability,0.0
+CLM-2024-10083,Resolved,239,28273.52,Vehicle Theft,Auto,0.0
+CLM-2024-10084,Resolved,159,37547.22,Medical Negligence,Life,17904.08
+CLM-2023-10085,Resolved,286,17131.11,Water Damage,Workers Comp,0.0
+CLM-2023-10086,Resolved,255,593490.34,Slip & Fall,Life,453372.58
+CLM-2024-10087,Resolved,246,98992.62,Rear-end Collision,Workers Comp,93275.1
+CLM-2023-10088,Resolved,373,206147.89,Product Liability,Health,197044.42
+CLM-2023-10089,Resolved,27,173119.09,Water Damage,Auto,44774.59
+CLM-2022-10090,Escalated,94,2494793.6,Hit & Run,Life,0.0
+CLM-2023-10091,Escalated,135,364831.52,Water Damage,Health,0.0
+CLM-2022-10092,Escalated,102,2500000.0,Rear-end Collision,Life,2309766.43
+CLM-2023-10093,Resolved,28,104606.63,Product Liability,Life,97839.95
+CLM-2024-10094,Resolved,185,11693.73,Medical Negligence,Health,10876.09
+CLM-2022-10095,Escalated,320,88344.94,Rear-end Collision,Workers Comp,13543.83
+CLM-2024-10096,Escalated,45,2500000.0,Commercial Vehicle Crash,Life,0.0
+CLM-2024-10097,Resolved,26,149921.83,Workplace Injury,Liability,90048.52
+CLM-2024-10098,Resolved,281,299792.17,Premises Liability,Health,235333.15
+CLM-2022-10099,Escalated,343,162237.56,Hit & Run,Property,0.0
+CLM-2023-10100,Resolved,267,6270.91,Workplace Injury,Workers Comp,0.0
+CLM-2024-10101,Resolved,90,67101.82,Vehicle Theft,Auto,26311.67
+CLM-2024-10102,Resolved,74,4938.67,Vandalism,Health,0.0
+CLM-2023-10103,Resolved,377,62061.78,Water Damage,Life,0.0
+CLM-2023-10104,Resolved,23,37684.48,Vehicle Theft,Health,0.0
+CLM-2024-10105,Escalated,118,155964.14,Hit & Run,Auto,0.0
+CLM-2022-10106,Resolved,368,236898.94,Fire Damage,Workers Comp,136119.76
+CLM-2022-10107,Escalated,224,185085.91,Hail Storm,Property,0.0
+CLM-2024-10108,Escalated,349,237483.6,Slip & Fall,Liability,0.0
+CLM-2022-10109,Escalated,289,667967.26,Workplace Injury,Life,0.0
+CLM-2023-10110,Resolved,145,8178.26,Hail Storm,Liability,0.0
+CLM-2024-10111,Resolved,49,728441.95,Commercial Vehicle Crash,Life,687582.12
+CLM-2024-10112,Resolved,268,881510.24,Fire Damage,Life,873306.02
+CLM-2024-10113,Escalated,211,1622457.98,Fire Damage,Health,0.0
+CLM-2024-10114,Escalated,300,668994.98,Product Liability,Workers Comp,0.0
+CLM-2023-10115,Resolved,89,69000.53,Vandalism,Liability,35396.87
+CLM-2022-10116,Resolved,57,17325.66,Hit & Run,Health,0.0
+CLM-2024-10117,Resolved,306,13824.98,Hit & Run,Auto,8732.19
+CLM-2024-10118,Resolved,128,1318211.43,Construction Defect,Life,589194.22
+CLM-2023-10119,Resolved,326,343010.7,Product Liability,Life,0.0
+CLM-2024-10120,Escalated,49,520430.68,Hail Storm,Auto,0.0
+CLM-2022-10121,Escalated,37,54712.88,Vandalism,Health,0.0
+CLM-2024-10122,Resolved,23,547142.06,Premises Liability,Auto,454374.4
+CLM-2022-10123,Resolved,238,7642.11,Premises Liability,Workers Comp,0.0
+CLM-2023-10124,Resolved,5,242239.3,Premises Liability,Workers Comp,0.0
+CLM-2022-10125,Escalated,344,1101712.47,Premises Liability,Health,0.0
+CLM-2023-10126,Resolved,162,116424.41,Water Damage,Health,0.0
+CLM-2023-10127,Resolved,76,28159.53,Workplace Injury,Property,5092.22
+CLM-2023-10128,Resolved,241,167377.51,Hit & Run,Life,0.0
+CLM-2022-10129,Escalated,250,60348.56,Flood Damage,Property,0.0
+CLM-2024-10130,Resolved,20,21796.77,Workplace Injury,Auto,20754.09
+CLM-2024-10131,Resolved,307,70685.03,Flood Damage,Workers Comp,63044.89
+CLM-2023-10132,Resolved,170,2486.58,Slip & Fall,Auto,1956.76
+CLM-2023-10133,Resolved,187,676288.66,Slip & Fall,Life,160737.46
+CLM-2022-10134,Resolved,182,226883.7,Commercial Vehicle Crash,Liability,224789.54
+CLM-2022-10135,Resolved,250,77013.84,Water Damage,Property,0.0
+CLM-2022-10136,Resolved,315,13579.92,Slip & Fall,Auto,0.0
+CLM-2024-10137,Resolved,325,29462.87,Flood Damage,Property,22286.71
+CLM-2023-10138,Resolved,120,880925.42,Vandalism,Liability,674268.99
+CLM-2024-10139,Escalated,297,893412.82,Rear-end Collision,Life,0.0
+CLM-2022-10140,Escalated,271,888019.38,Slip & Fall,Liability,409846.66
+CLM-2022-10141,Escalated,211,2032533.03,Hit & Run,Auto,0.0
+CLM-2022-10142,Resolved,378,5972.21,Rear-end Collision,Property,0.0
+CLM-2023-10143,Resolved,34,17152.68,Commercial Vehicle Crash,Property,0.0
+CLM-2023-10144,Resolved,388,24626.46,Premises Liability,Workers Comp,0.0
+CLM-2022-10145,Resolved,145,283580.75,Commercial Vehicle Crash,Auto,163283.84
+CLM-2023-10146,Resolved,171,19115.39,Hit & Run,Liability,18886.9
+CLM-2022-10147,Escalated,370,41766.16,Fire Damage,Workers Comp,0.0
+CLM-2023-10148,Resolved,174,12784.29,Vehicle Theft,Health,11459.74
+CLM-2024-10149,Resolved,239,62386.3,Premises Liability,Liability,60240.12
+CLM-2024-10150,Escalated,249,68346.9,Vandalism,Auto,17066.71
+CLM-2024-10151,Resolved,238,43550.54,Construction Defect,Workers Comp,17945.38
+CLM-2023-10152,Resolved,309,36553.01,Rear-end Collision,Liability,0.0
+CLM-2023-10153,Resolved,321,23239.44,Construction Defect,Liability,0.0
+CLM-2022-10154,Escalated,298,506720.95,Medical Negligence,Health,0.0
+CLM-2024-10155,Resolved,344,8203.7,Rear-end Collision,Liability,0.0
+CLM-2022-10156,Escalated,218,1751893.29,Workplace Injury,Liability,0.0
+CLM-2023-10157,Escalated,375,113675.04,Premises Liability,Liability,0.0
+CLM-2024-10158,Resolved,389,60130.47,Medical Negligence,Liability,59681.67
+CLM-2024-10159,Escalated,286,61769.29,Vandalism,Auto,0.0
+CLM-2024-10160,Resolved,329,6845.44,Commercial Vehicle Crash,Auto,6027.38
+CLM-2022-10161,Resolved,306,118844.52,Vehicle Theft,Auto,0.0
+CLM-2024-10162,Escalated,219,1063728.64,Premises Liability,Liability,305075.18
+CLM-2022-10163,Escalated,368,328339.02,Commercial Vehicle Crash,Property,153806.71
+CLM-2024-10164,Escalated,151,686759.68,Construction Defect,Workers Comp,0.0
+CLM-2023-10165,Escalated,355,308547.06,Construction Defect,Workers Comp,0.0
+CLM-2022-10166,Escalated,224,2500000.0,Hail Storm,Life,0.0
+CLM-2024-10167,Resolved,86,2500000.0,Rear-end Collision,Life,2210647.47
+CLM-2024-10168,Escalated,25,164552.67,Water Damage,Health,0.0
+CLM-2023-10169,Resolved,8,98198.47,Water Damage,Life,0.0
+CLM-2022-10170,Resolved,121,33547.94,Commercial Vehicle Crash,Workers Comp,0.0
+CLM-2023-10171,Resolved,343,30317.6,Construction Defect,Workers Comp,0.0
+CLM-2024-10172,Resolved,112,81992.64,Premises Liability,Workers Comp,69953.14
+CLM-2024-10173,Escalated,174,602011.69,Product Liability,Health,0.0
+CLM-2023-10174,Escalated,383,463866.07,Vehicle Theft,Workers Comp,363474.53
+CLM-2023-10175,Resolved,302,124203.9,Fire Damage,Auto,66399.42
+CLM-2024-10176,Escalated,355,63223.74,Workplace Injury,Property,0.0
+CLM-2022-10177,Resolved,271,262937.5,Vehicle Theft,Auto,234682.25
+CLM-2024-10178,Resolved,334,33634.08,Premises Liability,Liability,0.0
+CLM-2022-10179,Escalated,267,2500000.0,Product Liability,Liability,582926.71
+CLM-2024-10180,Resolved,140,59705.94,Flood Damage,Auto,19185.65
+CLM-2023-10181,Resolved,52,98753.56,Hail Storm,Health,88963.99
+CLM-2023-10182,Resolved,283,41566.44,Flood Damage,Liability,0.0
+CLM-2024-10183,Resolved,391,50579.62,Water Damage,Workers Comp,21549.57
+CLM-2024-10184,Resolved,355,164235.02,Water Damage,Property,56587.48
+CLM-2024-10185,Resolved,270,15791.65,Medical Negligence,Health,0.0
+CLM-2022-10186,Escalated,291,151467.5,Slip & Fall,Health,0.0
+CLM-2023-10187,Escalated,360,64927.13,Hail Storm,Liability,0.0
+CLM-2022-10188,Escalated,349,254409.2,Product Liability,Liability,0.0
+CLM-2023-10189,Resolved,344,8502.25,Construction Defect,Liability,1303.5
+CLM-2023-10190,Resolved,356,137680.25,Fire Damage,Liability,87874.91
+CLM-2024-10191,Resolved,219,720199.63,Medical Negligence,Property,590496.99
+CLM-2024-10192,Escalated,278,71758.76,Hail Storm,Health,30932.99
+CLM-2022-10193,Escalated,352,28578.1,Commercial Vehicle Crash,Liability,0.0
+CLM-2024-10194,Escalated,121,169743.99,Workplace Injury,Auto,85757.51
+CLM-2023-10195,Resolved,32,175178.74,Fire Damage,Liability,113517.03
+CLM-2024-10196,Resolved,281,40334.8,Vehicle Theft,Workers Comp,40027.67
+CLM-2024-10197,Resolved,393,88077.53,Product Liability,Workers Comp,72372.48
+CLM-2023-10198,Resolved,204,117818.18,Hit & Run,Property,0.0
+CLM-2024-10199,Escalated,30,131773.42,Flood Damage,Liability,0.0
+CLM-2022-10200,Resolved,41,66701.58,Flood Damage,Liability,0.0
+CLM-2024-10201,Resolved,286,166779.51,Construction Defect,Health,0.0
+CLM-2024-10202,Resolved,84,359644.48,Rear-end Collision,Property,0.0
+CLM-2023-10203,Escalated,253,309500.79,Fire Damage,Auto,0.0
+CLM-2023-10204,Resolved,380,263654.76,Premises Liability,Life,238590.06
+CLM-2024-10205,Escalated,71,48201.89,Hail Storm,Health,0.0
+CLM-2023-10206,Resolved,367,61675.51,Rear-end Collision,Property,17448.48
+CLM-2023-10207,Escalated,239,64533.74,Construction Defect,Auto,15500.89
+CLM-2022-10208,Escalated,135,308381.74,Hail Storm,Property,0.0
+CLM-2024-10209,Escalated,132,2500000.0,Vehicle Theft,Auto,0.0
+CLM-2022-10210,Escalated,227,591240.07,Fire Damage,Liability,0.0
+CLM-2023-10211,Resolved,80,870995.5,Fire Damage,Life,0.0
+CLM-2022-10212,Resolved,62,128517.42,Vandalism,Health,108123.88
+CLM-2024-10213,Escalated,48,2500000.0,Commercial Vehicle Crash,Life,1151253.05
+CLM-2024-10214,Resolved,274,58555.75,Rear-end Collision,Liability,48074.47
+CLM-2022-10215,Resolved,310,205677.12,Commercial Vehicle Crash,Workers Comp,0.0
+CLM-2022-10216,Resolved,20,7692.64,Construction Defect,Liability,0.0
+CLM-2024-10217,Escalated,302,103178.91,Product Liability,Workers Comp,59977.26
+CLM-2023-10218,Resolved,331,12910.14,Medical Negligence,Health,0.0
+CLM-2024-10219,Resolved,396,7878.54,Product Liability,Health,4924.87
+CLM-2022-10220,Escalated,279,1866692.86,Construction Defect,Liability,0.0
+CLM-2022-10221,Resolved,269,30133.36,Rear-end Collision,Workers Comp,0.0
+CLM-2023-10222,Resolved,190,95731.62,Vandalism,Health,0.0
+CLM-2022-10223,Resolved,6,3077.64,Commercial Vehicle Crash,Workers Comp,0.0
+CLM-2023-10224,Resolved,346,84221.86,Workplace Injury,Liability,82545.52
+CLM-2022-10225,Escalated,393,2500000.0,Water Damage,Life,0.0
+CLM-2024-10226,Resolved,319,64396.07,Rear-end Collision,Life,56663.81
+CLM-2022-10227,Resolved,358,28239.87,Rear-end Collision,Auto,23352.77
+CLM-2023-10228,Resolved,176,375609.22,Rear-end Collision,Life,0.0
+CLM-2024-10229,Escalated,204,105591.78,Flood Damage,Auto,0.0
+CLM-2022-10230,Resolved,17,21861.8,Medical Negligence,Health,18255.24
+CLM-2023-10231,Resolved,28,37748.04,Fire Damage,Workers Comp,0.0
+CLM-2022-10232,Resolved,184,36799.24,Hail Storm,Property,0.0
+CLM-2022-10233,Resolved,358,8789.97,Rear-end Collision,Liability,0.0
+CLM-2023-10234,Resolved,171,211467.38,Vandalism,Auto,34920.05
+CLM-2023-10235,Resolved,86,120500.69,Hit & Run,Life,0.0
+CLM-2023-10236,Resolved,60,4850.13,Product Liability,Health,4034.59
+CLM-2022-10237,Resolved,227,8839.06,Product Liability,Health,7916.98
+CLM-2023-10238,Escalated,76,306815.77,Slip & Fall,Property,0.0
+CLM-2024-10239,Resolved,324,30393.08,Rear-end Collision,Workers Comp,12300.31
+CLM-2022-10240,Resolved,45,112916.56,Commercial Vehicle Crash,Liability,112453.01
+CLM-2024-10241,Resolved,245,232891.5,Construction Defect,Workers Comp,230596.43
+CLM-2024-10242,Escalated,147,615998.38,Rear-end Collision,Property,0.0
+CLM-2022-10243,Resolved,216,90711.01,Water Damage,Property,43571.55
+CLM-2024-10244,Resolved,234,8011.45,Fire Damage,Auto,0.0
+CLM-2023-10245,Resolved,358,24225.28,Vehicle Theft,Property,21485.48
+CLM-2022-10246,Escalated,367,400148.58,Flood Damage,Property,0.0
+CLM-2023-10247,Resolved,140,25588.7,Water Damage,Property,4726.21
+CLM-2024-10248,Resolved,81,784426.51,Flood Damage,Liability,0.0
+CLM-2024-10249,Escalated,175,278000.66,Workplace Injury,Liability,180285.62
+CLM-2023-10250,Resolved,23,7432.46,Flood Damage,Workers Comp,3789.58
+CLM-2024-10251,Resolved,301,49403.43,Rear-end Collision,Liability,0.0
+CLM-2024-10252,Resolved,223,516148.66,Fire Damage,Auto,0.0
+CLM-2023-10253,Resolved,56,467008.32,Fire Damage,Life,251638.48
+CLM-2022-10254,Resolved,97,55940.16,Workplace Injury,Property,25933.62
+CLM-2024-10255,Resolved,95,11740.86,Hit & Run,Auto,7177.62
+CLM-2022-10256,Escalated,308,257305.44,Rear-end Collision,Liability,134710.56
+CLM-2022-10257,Resolved,239,66113.76,Workplace Injury,Health,55512.26
+CLM-2022-10258,Escalated,300,161308.91,Slip & Fall,Health,31170.88
+CLM-2023-10259,Resolved,263,69750.64,Commercial Vehicle Crash,Workers Comp,61574.5
+CLM-2023-10260,Escalated,297,55582.49,Construction Defect,Workers Comp,0.0
+CLM-2023-10261,Resolved,111,131021.88,Slip & Fall,Workers Comp,0.0
+CLM-2022-10262,Resolved,302,1867.52,Medical Negligence,Auto,1118.58
+CLM-2023-10263,Resolved,44,19443.6,Commercial Vehicle Crash,Life,15924.03
+CLM-2022-10264,Escalated,271,85210.81,Product Liability,Liability,0.0
+CLM-2024-10265,Resolved,87,25092.23,Premises Liability,Health,6050.75
+CLM-2022-10266,Resolved,17,329279.3,Vandalism,Health,324981.3
+CLM-2024-10267,Escalated,162,37738.96,Premises Liability,Liability,0.0
+CLM-2024-10268,Escalated,266,73950.89,Water Damage,Health,0.0
+CLM-2022-10269,Resolved,78,129900.38,Commercial Vehicle Crash,Liability,0.0
+CLM-2022-10270,Resolved,291,204765.17,Hail Storm,Health,30965.27
+CLM-2024-10271,Resolved,326,23184.98,Premises Liability,Liability,0.0
+CLM-2023-10272,Escalated,332,1006535.72,Vandalism,Property,248521.14
+CLM-2023-10273,Resolved,88,212377.19,Product Liability,Property,167488.88
+CLM-2024-10274,Escalated,310,60638.44,Hail Storm,Workers Comp,0.0
+CLM-2022-10275,Resolved,267,58187.0,Fire Damage,Property,0.0
+CLM-2024-10276,Escalated,378,1171572.47,Flood Damage,Life,0.0
+CLM-2022-10277,Resolved,114,14546.7,Construction Defect,Auto,0.0
+CLM-2024-10278,Resolved,120,80310.64,Vehicle Theft,Workers Comp,0.0
+CLM-2023-10279,Resolved,91,48680.32,Vandalism,Workers Comp,48378.59
+CLM-2022-10280,Escalated,259,237930.02,Water Damage,Property,0.0
+CLM-2022-10281,Resolved,256,233060.24,Hit & Run,Liability,206400.37
+CLM-2023-10282,Escalated,296,400203.9,Vandalism,Liability,0.0
+CLM-2022-10283,Escalated,396,57656.52,Hit & Run,Liability,0.0
+CLM-2022-10284,Resolved,220,777012.61,Vehicle Theft,Workers Comp,0.0
+CLM-2023-10285,Resolved,43,5839.97,Construction Defect,Auto,4799.51
+CLM-2022-10286,Resolved,158,65157.52,Hit & Run,Auto,52127.27
+CLM-2024-10287,Escalated,294,255851.02,Construction Defect,Workers Comp,0.0
+CLM-2023-10288,Escalated,242,222887.75,Flood Damage,Workers Comp,143906.71
+CLM-2022-10289,Resolved,348,44109.24,Product Liability,Property,0.0
+CLM-2024-10290,Resolved,116,331132.41,Vehicle Theft,Life,328642.58
+CLM-2024-10291,Resolved,315,17296.91,Slip & Fall,Workers Comp,9504.14
+CLM-2024-10292,Resolved,87,38893.17,Slip & Fall,Workers Comp,0.0
+CLM-2022-10293,Resolved,395,372028.86,Construction Defect,Property,0.0
+CLM-2024-10294,Escalated,149,104743.41,Fire Damage,Auto,0.0
+CLM-2022-10295,Resolved,274,9332.77,Vandalism,Auto,0.0
+CLM-2022-10296,Escalated,139,658665.03,Fire Damage,Liability,180578.93
+CLM-2022-10297,Escalated,186,1230929.71,Flood Damage,Workers Comp,0.0
+CLM-2024-10298,Resolved,165,110036.36,Premises Liability,Health,43971.11
+CLM-2023-10299,Resolved,366,449750.11,Medical Negligence,Life,0.0
+CLM-2024-10300,Resolved,344,48211.48,Commercial Vehicle Crash,Auto,0.0
+CLM-2022-10301,Resolved,142,18899.75,Rear-end Collision,Property,0.0
+CLM-2024-10302,Resolved,111,113754.88,Water Damage,Auto,0.0
+CLM-2023-10303,Resolved,193,23288.17,Hit & Run,Workers Comp,19993.51
+CLM-2023-10304,Escalated,272,109942.94,Hail Storm,Liability,0.0
+CLM-2024-10305,Escalated,365,84620.79,Construction Defect,Workers Comp,0.0
+CLM-2023-10306,Escalated,341,407728.52,Construction Defect,Auto,0.0
+CLM-2023-10307,Resolved,159,51644.89,Slip & Fall,Health,19986.29
+CLM-2024-10308,Resolved,258,162214.94,Commercial Vehicle Crash,Auto,0.0
+CLM-2024-10309,Resolved,234,5764.22,Construction Defect,Health,4555.66
+CLM-2022-10310,Escalated,149,1601093.42,Commercial Vehicle Crash,Life,0.0
+CLM-2023-10311,Escalated,292,2500000.0,Rear-end Collision,Life,0.0
+CLM-2024-10312,Resolved,58,148755.28,Product Liability,Life,0.0
+CLM-2023-10313,Escalated,247,880918.08,Construction Defect,Liability,0.0
+CLM-2023-10314,Escalated,231,1332685.08,Water Damage,Health,544634.21
+CLM-2023-10315,Resolved,181,87508.01,Water Damage,Liability,0.0
+CLM-2024-10316,Escalated,281,637071.36,Vandalism,Workers Comp,0.0
+CLM-2022-10317,Escalated,68,301796.84,Commercial Vehicle Crash,Health,0.0
+CLM-2024-10318,Resolved,369,233728.51,Water Damage,Workers Comp,180084.73
+CLM-2022-10319,Resolved,253,97494.49,Hit & Run,Liability,96715.31
+CLM-2023-10320,Resolved,253,116822.53,Premises Liability,Property,0.0
+CLM-2022-10321,Resolved,263,38490.25,Hail Storm,Auto,0.0
+CLM-2024-10322,Resolved,68,7317.94,Premises Liability,Health,0.0
+CLM-2023-10323,Resolved,179,418975.08,Rear-end Collision,Health,404274.13
+CLM-2022-10324,Resolved,55,13842.59,Fire Damage,Health,0.0
+CLM-2022-10325,Escalated,14,71009.56,Hail Storm,Liability,0.0
+CLM-2022-10326,Escalated,322,615617.64,Commercial Vehicle Crash,Auto,0.0
+CLM-2024-10327,Resolved,226,1348932.59,Commercial Vehicle Crash,Life,1282179.5
+CLM-2024-10328,Resolved,395,104307.68,Flood Damage,Property,19878.37
+CLM-2024-10329,Escalated,368,377242.12,Commercial Vehicle Crash,Liability,0.0
+CLM-2023-10330,Escalated,354,135830.2,Construction Defect,Workers Comp,0.0
+CLM-2022-10331,Escalated,213,70447.69,Commercial Vehicle Crash,Health,0.0
+CLM-2022-10332,Resolved,37,19565.28,Medical Negligence,Liability,0.0
+CLM-2023-10333,Resolved,36,21823.72,Commercial Vehicle Crash,Property,12523.46
+CLM-2023-10334,Resolved,201,146153.1,Slip & Fall,Auto,0.0
+CLM-2024-10335,Escalated,75,119906.67,Rear-end Collision,Auto,53030.06
+CLM-2022-10336,Resolved,181,57894.73,Vehicle Theft,Property,46334.04
+CLM-2023-10337,Escalated,117,351310.66,Medical Negligence,Workers Comp,0.0
+CLM-2023-10338,Escalated,396,389800.54,Fire Damage,Liability,0.0
+CLM-2022-10339,Resolved,161,180673.81,Flood Damage,Life,0.0
+CLM-2022-10340,Resolved,131,10928.72,Flood Damage,Health,10370.29
+CLM-2024-10341,Resolved,302,39222.61,Fire Damage,Auto,38449.78
+CLM-2023-10342,Escalated,267,366593.22,Workplace Injury,Property,0.0
+CLM-2023-10343,Resolved,105,10306.08,Vandalism,Health,0.0
+CLM-2024-10344,Escalated,375,114658.03,Vehicle Theft,Property,92693.08
+CLM-2022-10345,Resolved,222,34851.35,Vandalism,Health,14595.82
+CLM-2022-10346,Resolved,160,15123.16,Water Damage,Workers Comp,3057.25
+CLM-2022-10347,Resolved,279,3827.31,Flood Damage,Health,0.0
+CLM-2022-10348,Escalated,314,67830.35,Hit & Run,Health,29480.06
+CLM-2022-10349,Resolved,98,152216.57,Construction Defect,Property,129138.69
+CLM-2024-10350,Escalated,111,251284.79,Construction Defect,Workers Comp,0.0
+CLM-2023-10351,Resolved,246,167950.5,Rear-end Collision,Liability,0.0
+CLM-2024-10352,Escalated,330,86357.93,Water Damage,Workers Comp,0.0
+CLM-2022-10353,Resolved,54,23973.06,Premises Liability,Health,0.0
+CLM-2022-10354,Resolved,147,44068.47,Slip & Fall,Liability,0.0
+CLM-2024-10355,Escalated,346,166193.68,Fire Damage,Life,0.0
+CLM-2024-10356,Resolved,109,44092.87,Rear-end Collision,Health,26971.81
+CLM-2023-10357,Escalated,356,545961.63,Water Damage,Life,320126.18
+CLM-2022-10358,Escalated,130,386734.05,Product Liability,Auto,0.0
+CLM-2023-10359,Escalated,377,24572.94,Vandalism,Health,0.0
+CLM-2023-10360,Resolved,333,95608.83,Fire Damage,Health,81477.55
+CLM-2022-10361,Resolved,351,240881.97,Medical Negligence,Workers Comp,0.0
+CLM-2022-10362,Resolved,261,10558.19,Commercial Vehicle Crash,Workers Comp,0.0
+CLM-2024-10363,Resolved,152,21778.87,Commercial Vehicle Crash,Property,0.0
+CLM-2023-10364,Resolved,155,320471.61,Commercial Vehicle Crash,Life,68049.19
+CLM-2022-10365,Resolved,141,56499.85,Rear-end Collision,Auto,0.0
+CLM-2022-10366,Escalated,389,959656.05,Rear-end Collision,Life,0.0
+CLM-2022-10367,Resolved,248,20278.96,Product Liability,Auto,0.0
+CLM-2024-10368,Escalated,390,395418.56,Vandalism,Health,0.0
+CLM-2023-10369,Resolved,333,31779.11,Slip & Fall,Workers Comp,0.0
+CLM-2022-10370,Escalated,399,186833.88,Construction Defect,Health,0.0
+CLM-2024-10371,Resolved,366,167194.37,Commercial Vehicle Crash,Property,134411.95
+CLM-2023-10372,Resolved,205,58720.94,Construction Defect,Workers Comp,0.0
+CLM-2024-10373,Resolved,381,2369848.47,Commercial Vehicle Crash,Life,1215681.92
+CLM-2023-10374,Resolved,310,373847.8,Vandalism,Property,350033.72
+CLM-2024-10375,Resolved,335,13512.72,Slip & Fall,Auto,2698.77
+CLM-2023-10376,Resolved,165,978948.2,Commercial Vehicle Crash,Life,765737.2
+CLM-2024-10377,Resolved,256,24469.04,Hail Storm,Auto,0.0
+CLM-2022-10378,Escalated,337,482831.36,Rear-end Collision,Health,300499.87
+CLM-2022-10379,Escalated,314,97066.66,Construction Defect,Workers Comp,85697.0
+CLM-2022-10380,Resolved,306,39307.91,Commercial Vehicle Crash,Health,0.0
+CLM-2022-10381,Escalated,141,51202.48,Medical Negligence,Health,50876.06
+CLM-2023-10382,Resolved,44,42243.86,Vehicle Theft,Life,7549.22
+CLM-2022-10383,Resolved,275,37856.29,Vandalism,Liability,0.0
+CLM-2022-10384,Escalated,65,195234.55,Medical Negligence,Life,0.0
+CLM-2024-10385,Resolved,374,193061.81,Hail Storm,Workers Comp,161908.02
+CLM-2022-10386,Resolved,229,43690.42,Premises Liability,Auto,9609.15
+CLM-2024-10387,Resolved,70,157514.92,Fire Damage,Auto,63152.35
+CLM-2022-10388,Escalated,378,142236.22,Water Damage,Auto,0.0
+CLM-2023-10389,Resolved,14,39789.66,Construction Defect,Workers Comp,30349.12
+CLM-2024-10390,Resolved,5,25125.2,Rear-end Collision,Liability,0.0
+CLM-2024-10391,Resolved,146,77306.16,Medical Negligence,Liability,0.0
+CLM-2024-10392,Escalated,291,14042.49,Slip & Fall,Auto,0.0
+CLM-2023-10393,Resolved,229,134959.72,Hit & Run,Health,0.0
+CLM-2022-10394,Escalated,28,709165.93,Construction Defect,Life,645272.8
+CLM-2022-10395,Resolved,155,145567.17,Slip & Fall,Life,0.0
+CLM-2023-10396,Resolved,84,18229.55,Construction Defect,Auto,16998.2
+CLM-2022-10397,Resolved,237,199521.52,Flood Damage,Health,0.0
+CLM-2022-10398,Escalated,381,184708.94,Water Damage,Auto,72075.78
+CLM-2023-10399,Resolved,121,290242.8,Vehicle Theft,Workers Comp,0.0
+CLM-2024-10400,Resolved,312,1384.82,Flood Damage,Auto,0.0
+CLM-2022-10401,Resolved,62,54306.71,Water Damage,Property,34201.97
+CLM-2022-10402,Escalated,279,183918.29,Workplace Injury,Liability,0.0
+CLM-2023-10403,Resolved,220,55284.46,Hail Storm,Property,0.0
+CLM-2024-10404,Escalated,296,80032.69,Workplace Injury,Workers Comp,0.0
+CLM-2023-10405,Resolved,221,223204.45,Water Damage,Liability,0.0
+CLM-2024-10406,Escalated,359,13141.44,Hail Storm,Auto,0.0
+CLM-2023-10407,Resolved,287,6840.25,Slip & Fall,Auto,4204.02
+CLM-2024-10408,Resolved,350,22829.59,Rear-end Collision,Auto,0.0
+CLM-2024-10409,Resolved,378,14088.01,Vehicle Theft,Auto,0.0
+CLM-2023-10410,Escalated,49,632534.9,Premises Liability,Auto,148556.4
+CLM-2024-10411,Escalated,322,31344.06,Construction Defect,Health,0.0
+CLM-2023-10412,Resolved,203,30340.88,Product Liability,Life,0.0
+CLM-2024-10413,Resolved,79,73392.1,Workplace Injury,Health,65469.54
+CLM-2023-10414,Resolved,273,72064.99,Water Damage,Auto,42989.41
+CLM-2023-10415,Resolved,345,23045.67,Workplace Injury,Property,0.0
+CLM-2023-10416,Resolved,183,1138078.89,Construction Defect,Life,0.0
+CLM-2023-10417,Escalated,224,84467.09,Vandalism,Workers Comp,0.0
+CLM-2023-10418,Resolved,329,653155.68,Vehicle Theft,Workers Comp,0.0
+CLM-2023-10419,Resolved,342,64625.88,Workplace Injury,Life,0.0
+CLM-2023-10420,Escalated,300,1857373.87,Commercial Vehicle Crash,Property,1151006.89
+CLM-2023-10421,Escalated,399,1949024.87,Construction Defect,Auto,0.0
+CLM-2024-10422,Resolved,331,34219.71,Flood Damage,Health,7030.98
+CLM-2023-10423,Escalated,165,560497.17,Premises Liability,Property,0.0
+CLM-2023-10424,Resolved,20,122028.92,Rear-end Collision,Life,31712.94
+CLM-2022-10425,Resolved,57,201097.32,Vehicle Theft,Workers Comp,166487.72
+CLM-2023-10426,Resolved,214,4843.52,Hit & Run,Property,2728.56
+CLM-2022-10427,Resolved,169,29776.33,Flood Damage,Property,5452.57
+CLM-2022-10428,Escalated,68,238265.79,Slip & Fall,Workers Comp,0.0
+CLM-2022-10429,Resolved,145,27812.42,Fire Damage,Property,23642.95
+CLM-2023-10430,Resolved,280,3809.4,Hit & Run,Property,0.0
+CLM-2023-10431,Escalated,216,80399.08,Vehicle Theft,Liability,0.0
+CLM-2023-10432,Resolved,244,89223.48,Vehicle Theft,Auto,77794.97
+CLM-2023-10433,Resolved,89,1007610.97,Fire Damage,Workers Comp,225347.02
+CLM-2022-10434,Resolved,144,352383.6,Product Liability,Liability,0.0
+CLM-2023-10435,Resolved,56,94930.31,Hail Storm,Property,0.0
+CLM-2022-10436,Resolved,357,593832.3,Fire Damage,Health,492155.22
+CLM-2023-10437,Resolved,13,3944.26,Medical Negligence,Liability,2544.86
+CLM-2022-10438,Escalated,270,19062.23,Medical Negligence,Workers Comp,0.0
+CLM-2022-10439,Resolved,235,47036.34,Flood Damage,Auto,13295.04
+CLM-2023-10440,Escalated,153,1373155.64,Hail Storm,Life,0.0
+CLM-2023-10441,Resolved,262,84409.05,Commercial Vehicle Crash,Property,0.0
+CLM-2024-10442,Escalated,301,4629.63,Premises Liability,Liability,0.0
+CLM-2022-10443,Resolved,186,339982.44,Premises Liability,Life,0.0
+CLM-2022-10444,Resolved,206,149139.28,Premises Liability,Life,129110.17
+CLM-2023-10445,Resolved,350,1723346.28,Slip & Fall,Life,0.0
+CLM-2022-10446,Resolved,284,224503.96,Slip & Fall,Life,0.0
+CLM-2022-10447,Escalated,362,38407.91,Hail Storm,Health,0.0
+CLM-2023-10448,Resolved,262,34092.96,Vehicle Theft,Life,0.0
+CLM-2024-10449,Escalated,264,65494.92,Vandalism,Property,0.0
+CLM-2024-10450,Resolved,94,112005.14,Commercial Vehicle Crash,Auto,0.0
+CLM-2022-10451,Escalated,229,475993.39,Hit & Run,Property,0.0
+CLM-2024-10452,Resolved,75,40576.66,Medical Negligence,Auto,14760.0
+CLM-2024-10453,Resolved,299,78344.33,Rear-end Collision,Health,48252.63
+CLM-2024-10454,Resolved,36,6640.95,Rear-end Collision,Workers Comp,1238.24
+CLM-2024-10455,Resolved,15,18812.14,Fire Damage,Liability,0.0
+CLM-2024-10456,Escalated,228,106671.96,Workplace Injury,Auto,0.0
+CLM-2024-10457,Resolved,71,52394.97,Flood Damage,Workers Comp,20400.02
+CLM-2023-10458,Escalated,366,187935.52,Vandalism,Health,0.0
+CLM-2024-10459,Escalated,48,140599.75,Commercial Vehicle Crash,Workers Comp,0.0
+CLM-2022-10460,Resolved,392,387413.22,Workplace Injury,Workers Comp,360854.72
+CLM-2022-10461,Escalated,399,508745.92,Vandalism,Life,0.0
+CLM-2023-10462,Resolved,289,9263.06,Slip & Fall,Auto,1660.8
+CLM-2022-10463,Resolved,288,226097.93,Commercial Vehicle Crash,Property,146056.0
+CLM-2024-10464,Escalated,333,75766.27,Slip & Fall,Auto,0.0
+CLM-2023-10465,Resolved,369,19463.63,Medical Negligence,Health,0.0
+CLM-2022-10466,Resolved,173,449768.06,Workplace Injury,Workers Comp,0.0
+CLM-2024-10467,Resolved,213,138048.22,Hail Storm,Life,108303.67
+CLM-2022-10468,Resolved,69,23316.49,Hit & Run,Health,0.0
+CLM-2024-10469,Escalated,327,59713.2,Construction Defect,Liability,0.0
+CLM-2022-10470,Escalated,257,118228.23,Fire Damage,Auto,0.0
+CLM-2023-10471,Resolved,91,11824.26,Premises Liability,Workers Comp,11791.17
+CLM-2022-10472,Resolved,223,23928.57,Rear-end Collision,Health,20661.42
+CLM-2023-10473,Resolved,42,393546.99,Construction Defect,Property,144309.28
+CLM-2024-10474,Escalated,269,650955.9,Fire Damage,Health,0.0
+CLM-2023-10475,Resolved,283,22621.24,Hit & Run,Workers Comp,17511.86
+CLM-2023-10476,Escalated,214,101819.0,Vandalism,Health,0.0
+CLM-2023-10477,Resolved,61,42574.19,Premises Liability,Property,0.0
+CLM-2023-10478,Resolved,174,2500000.0,Slip & Fall,Life,2220594.48
+CLM-2022-10479,Escalated,210,231287.15,Water Damage,Liability,0.0
+CLM-2024-10480,Resolved,239,95561.6,Construction Defect,Auto,77984.71
+CLM-2022-10481,Resolved,399,47189.92,Vehicle Theft,Liability,0.0
+CLM-2022-10482,Escalated,394,113221.88,Fire Damage,Life,31250.59
+CLM-2022-10483,Escalated,380,2500000.0,Workplace Injury,Life,1923440.28
+CLM-2024-10484,Escalated,373,149339.37,Rear-end Collision,Auto,145215.55
+CLM-2024-10485,Escalated,7,58847.59,Hit & Run,Life,0.0
+CLM-2024-10486,Resolved,135,42965.98,Product Liability,Property,0.0
+CLM-2024-10487,Resolved,319,18258.7,Slip & Fall,Life,14446.37
+CLM-2022-10488,Resolved,45,1145495.36,Vehicle Theft,Property,1129885.1
+CLM-2023-10489,Resolved,102,196158.62,Slip & Fall,Workers Comp,46980.54
+CLM-2024-10490,Escalated,365,422908.31,Slip & Fall,Property,0.0
+CLM-2024-10491,Resolved,33,378818.96,Commercial Vehicle Crash,Workers Comp,0.0
+CLM-2022-10492,Escalated,394,281808.64,Commercial Vehicle Crash,Property,217272.26
+CLM-2022-10493,Resolved,64,63444.44,Construction Defect,Workers Comp,0.0
+CLM-2022-10494,Escalated,120,1922805.35,Slip & Fall,Liability,1137886.0
+CLM-2023-10495,Escalated,152,786748.25,Medical Negligence,Life,0.0
+CLM-2022-10496,Resolved,327,2556.07,Premises Liability,Auto,586.3
+CLM-2022-10497,Resolved,252,36499.19,Hail Storm,Liability,27740.56
+CLM-2023-10498,Resolved,77,57251.58,Rear-end Collision,Life,48606.5
+CLM-2022-10499,Resolved,246,11453.39,Commercial Vehicle Crash,Health,6087.8
+CLM-2022-10500,Resolved,317,1038695.97,Workplace Injury,Life,1016516.18
+CLM-2022-10501,Escalated,354,1736843.62,Workplace Injury,Property,0.0
+CLM-2022-10502,Resolved,235,80519.69,Workplace Injury,Life,0.0
+CLM-2022-10503,Escalated,240,104400.11,Slip & Fall,Workers Comp,0.0
+CLM-2023-10504,Resolved,48,8799.24,Vehicle Theft,Health,0.0
+CLM-2023-10505,Resolved,267,57932.7,Premises Liability,Health,0.0
+CLM-2022-10506,Resolved,100,128995.47,Slip & Fall,Liability,118399.77
+CLM-2022-10507,Escalated,377,45656.74,Fire Damage,Workers Comp,0.0
+CLM-2024-10508,Escalated,292,55378.25,Commercial Vehicle Crash,Property,14053.65
+CLM-2023-10509,Escalated,280,72483.06,Hit & Run,Health,0.0
+CLM-2022-10510,Escalated,330,257499.07,Workplace Injury,Workers Comp,0.0
+CLM-2023-10511,Escalated,262,274909.02,Hail Storm,Auto,0.0
+CLM-2024-10512,Escalated,369,457197.51,Rear-end Collision,Property,350306.2
+CLM-2022-10513,Resolved,271,26623.86,Vandalism,Health,0.0
+CLM-2024-10514,Resolved,139,23661.42,Rear-end Collision,Workers Comp,0.0
+CLM-2022-10515,Resolved,145,114772.67,Medical Negligence,Auto,0.0
+CLM-2022-10516,Resolved,19,24290.04,Construction Defect,Property,0.0
+CLM-2024-10517,Resolved,199,173695.4,Premises Liability,Life,145138.44
+CLM-2023-10518,Escalated,39,162743.36,Flood Damage,Workers Comp,0.0
+CLM-2024-10519,Escalated,37,357884.02,Premises Liability,Workers Comp,0.0
+CLM-2022-10520,Resolved,373,1147.67,Vandalism,Health,283.93
+CLM-2023-10521,Resolved,98,95441.11,Hail Storm,Property,0.0
+CLM-2022-10522,Escalated,276,325119.7,Premises Liability,Auto,199550.59
+CLM-2022-10523,Escalated,79,363881.92,Hit & Run,Health,0.0
+CLM-2024-10524,Escalated,169,209059.79,Rear-end Collision,Liability,0.0
+CLM-2023-10525,Resolved,280,7209.81,Construction Defect,Property,0.0
+CLM-2022-10526,Resolved,154,13310.21,Hit & Run,Health,0.0
+CLM-2022-10527,Resolved,35,47444.28,Medical Negligence,Liability,35775.37
+CLM-2023-10528,Escalated,102,1785132.25,Medical Negligence,Life,0.0
+CLM-2023-10529,Escalated,119,19415.37,Vandalism,Property,0.0
+CLM-2024-10530,Resolved,40,218019.16,Flood Damage,Health,133914.51
+CLM-2023-10531,Escalated,199,25725.99,Fire Damage,Auto,0.0
+CLM-2022-10532,Resolved,199,27664.26,Hit & Run,Workers Comp,17450.18
+CLM-2022-10533,Resolved,76,19628.88,Slip & Fall,Workers Comp,0.0
+CLM-2024-10534,Escalated,323,40421.68,Premises Liability,Health,0.0
+CLM-2022-10535,Resolved,279,31342.27,Hail Storm,Workers Comp,0.0
+CLM-2023-10536,Resolved,53,33960.02,Hit & Run,Property,0.0
+CLM-2022-10537,Escalated,202,168528.69,Vandalism,Workers Comp,0.0
+CLM-2023-10538,Escalated,177,264690.41,Flood Damage,Property,84831.03
+CLM-2022-10539,Resolved,182,111333.09,Slip & Fall,Property,95639.69
+CLM-2024-10540,Escalated,90,827558.24,Flood Damage,Auto,654936.94
+CLM-2024-10541,Escalated,380,12987.47,Vehicle Theft,Liability,0.0
+CLM-2023-10542,Resolved,376,32238.34,Water Damage,Liability,25402.57
+CLM-2023-10543,Resolved,179,154698.13,Hail Storm,Property,0.0
+CLM-2024-10544,Resolved,331,15947.84,Flood Damage,Property,14881.1
+CLM-2023-10545,Escalated,292,112456.66,Slip & Fall,Auto,98932.81
+CLM-2024-10546,Resolved,386,84897.26,Medical Negligence,Health,0.0
+CLM-2024-10547,Resolved,398,23995.05,Construction Defect,Auto,0.0
+CLM-2023-10548,Resolved,140,30083.98,Medical Negligence,Auto,0.0
+CLM-2023-10549,Resolved,344,77385.01,Premises Liability,Property,64619.66

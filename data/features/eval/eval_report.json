@@ -1,0 +1,131 @@
+{
+  "scenarios": {
+    "full": {
+      "n_features_used": 29,
+      "roc_auc": 1.0,
+      "average_precision": 1.0,
+      "positive_rate": 0.3545,
+      "threshold_sweep": [
+        {
+          "threshold": 0.35,
+          "tp": 39,
+          "fp": 0,
+          "tn": 71,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        {
+          "threshold": 0.5,
+          "tp": 39,
+          "fp": 0,
+          "tn": 71,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        {
+          "threshold": 0.65,
+          "tp": 39,
+          "fp": 0,
+          "tn": 71,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      ]
+    },
+    "adversarial_text": {
+      "n_features_used": 22,
+      "roc_auc": 1.0,
+      "average_precision": 1.0,
+      "positive_rate": 0.3545,
+      "threshold_sweep": [
+        {
+          "threshold": 0.35,
+          "tp": 39,
+          "fp": 0,
+          "tn": 71,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        {
+          "threshold": 0.5,
+          "tp": 39,
+          "fp": 0,
+          "tn": 71,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        {
+          "threshold": 0.65,
+          "tp": 39,
+          "fp": 0,
+          "tn": 71,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      ]
+    },
+    "structured_only": {
+      "n_features_used": 22,
+      "roc_auc": 0.9397,
+      "average_precision": 0.8758,
+      "positive_rate": 0.3545,
+      "threshold_sweep": [
+        {
+          "threshold": 0.35,
+          "tp": 36,
+          "fp": 15,
+          "tn": 56,
+          "fn": 3,
+          "precision": 0.7059,
+          "recall": 0.9231,
+          "f1": 0.8
+        },
+        {
+          "threshold": 0.5,
+          "tp": 30,
+          "fp": 5,
+          "tn": 66,
+          "fn": 9,
+          "precision": 0.8571,
+          "recall": 0.7692,
+          "f1": 0.8108
+        },
+        {
+          "threshold": 0.65,
+          "tp": 30,
+          "fp": 5,
+          "tn": 66,
+          "fn": 9,
+          "precision": 0.8571,
+          "recall": 0.7692,
+          "f1": 0.8108
+        }
+      ]
+    }
+  },
+  "dropped_in_adversarial": [
+    "nlp_risk_score",
+    "trigger_score",
+    "email_trigger_score",
+    "trigger_count",
+    "llm_conflict_score",
+    "combined_sentiment",
+    "adjuster_negative_tone"
+  ],
+  "split": {
+    "train": 440,
+    "holdout": 110
+  }
+}

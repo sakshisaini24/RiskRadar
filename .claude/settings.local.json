@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./venv/Scripts/python.exe -c \"import pandas, xgboost, sklearn, shap; print\\('ok'\\)\")",
+      "Bash(python -c \"import pandas, xgboost, sklearn, shap; print\\('ok'\\)\")",
+      "Bash(py -c \"import sys; print\\(sys.executable\\); import pandas, xgboost, sklearn, shap; print\\('ok'\\)\")",
+      "Bash(py -m models.train_model_a)",
+      "Bash(py -m models.train_model_b)",
+      "Bash(py -c ' *)",
+      "Bash(py -m models.fit_calibrator)",
+      "Bash(py -c \"import matplotlib; print\\(matplotlib.__version__\\)\")",
+      "Bash(py -m models.evaluate)",
+      "Bash(py -m uvicorn api.main:app --host 127.0.0.1 --port 8000 --log-level warning)",
+      "Bash(curl -sS http://127.0.0.1:8000/evaluation/report)",
+      "Bash(curl -sS -o /tmp/cal.png -w \"%{http_code} %{size_download} bytes\" http://127.0.0.1:8000/evaluation/plot/calibration_curve)",
+      "Bash(npm run *)",
+      "Bash(curl -sS -o /tmp/home.html -w \"HTTP %{http_code} · %{size_download} bytes\\\\n\" http://127.0.0.1:3001/)",
+      "Read(//tmp/**)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(curl -sS http://127.0.0.1:8000/claims)",
+      "Bash(py -m models.train_time_to_escalation)",
+      "Bash(npx --no-install tsc --noEmit)",
+      "Bash(curl -sS -o /tmp/out.json -w '%{http_code}' http://127.0.0.1:8000__TRACKED_VAR__)",
+      "Bash(curl -sS -X POST http://127.0.0.1:8000/feedback -H 'Content-Type: application/json' -d '{\"claim_id\":\"CLM-2022-10325\",\"verdict\":\"agree\",\"model_score\":99.0}')",
+      "Bash(netstat -ano)",
+      "Bash(taskkill //PID 25944 //F)",
+      "Bash(taskkill //PID 17648 //F)",
+      "Bash(curl -sS \"http://127.0.0.1:8000/feedback/summary\")",
+      "Bash(curl -sS \"http://127.0.0.1:8000/fairness?threshold=50\")",
+      "Bash(curl -sS \"http://127.0.0.1:8000/drift\")"
+    ]
+  }
+}

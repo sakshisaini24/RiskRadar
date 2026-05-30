@@ -1,0 +1,58 @@
+RiskRadar AI — Feature Matrix Report
+==================================================
+Total claims:     550
+Total features:   31
+
+Target distribution:
+  Resolved (0):   357  (64.9%)
+  Escalated (1):  193  (35.1%)
+
+All features in matrix:
+  days_to_file                             dtype=int64    nulls=0  |target corr|=0.015
+  offer_to_claim_ratio                     dtype=float64  nulls=0  |target corr|=0.26
+  large_settlement_gap                     dtype=int64    nulls=0  |target corr|=0.273
+  dispute_density                          dtype=int64    nulls=0  |target corr|=0.108
+  legal_pressure_index                     dtype=int64    nulls=0  |target corr|=0.311
+  has_legal_rep                            dtype=int64    nulls=0  |target corr|=0.24
+  is_junior_adjuster                       dtype=int64    nulls=0  |target corr|=0.065
+  high_state_risk                          dtype=int64    nulls=0  |target corr|=nan
+  claim_age_bucket                         dtype=float64  nulls=0  |target corr|=0.17
+  prior_disputes_x_legal                   dtype=int64    nulls=0  |target corr|=nan
+  log_claim_amount                         dtype=float64  nulls=0  |target corr|=0.442
+  short_tenure                             dtype=int64    nulls=0  |target corr|=0.044
+  days_open                                dtype=int64    nulls=0  |target corr|=0.188
+  settlement_gap_pct                       dtype=float64  nulls=0  |target corr|=0.26
+  policy_tenure_yrs                        dtype=int64    nulls=0  |target corr|=0.019
+  llm_conflict_score                       dtype=float64  nulls=0  |target corr|=0.902
+  followup_contacts                        dtype=int64    nulls=0  |target corr|=0.108
+  doc_requests                             dtype=int64    nulls=0  |target corr|=0.075
+  disputed_items                           dtype=int64    nulls=0  |target corr|=0.135
+  inspections                              dtype=int64    nulls=0  |target corr|=0.02
+  policy_type_enc                          dtype=int64    nulls=0  |target corr|=0.018
+  incident_type_enc                        dtype=int64    nulls=0  |target corr|=0.038
+  injury_severity_enc                      dtype=int64    nulls=0  |target corr|=0.028
+  adjuster_level_enc                       dtype=int64    nulls=0  |target corr|=0.017
+  payment_status_enc                       dtype=int64    nulls=0  |target corr|=0.009
+  combined_sentiment                       dtype=float64  nulls=0  |target corr|=0.714
+  trigger_score                            dtype=int64    nulls=0  |target corr|=0.921
+  trigger_count                            dtype=int64    nulls=0  |target corr|=0.866
+  email_trigger_score                      dtype=int64    nulls=0  |target corr|=0.949
+  adjuster_negative_tone                   dtype=int64    nulls=0  |target corr|=0.365
+  nlp_risk_score                           dtype=float64  nulls=0  |target corr|=0.939
+
+Top 15 features by correlation with target:
+  email_trigger_score                      0.9490
+  nlp_risk_score                           0.9386
+  trigger_score                            0.9206
+  llm_conflict_score                       0.9020
+  trigger_count                            0.8662
+  combined_sentiment                       0.7137
+  log_claim_amount                         0.4416
+  adjuster_negative_tone                   0.3651
+  legal_pressure_index                     0.3110
+  large_settlement_gap                     0.2732
+  offer_to_claim_ratio                     0.2603
+  settlement_gap_pct                       0.2602
+  has_legal_rep                            0.2402
+  days_open                                0.1877
+  claim_age_bucket                         0.1697
