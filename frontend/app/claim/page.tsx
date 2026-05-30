@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 
@@ -318,7 +318,7 @@ function renderHighlighted(text: string, matches: TriggerMatch[]) {
   return <>{parts}</>;
 }
 
-export default function RiskDashboard() {
+function RiskDashboard() {
   const searchParams = useSearchParams();
   const [claimId, setClaimId] = useState("CLM-2022-10461");
   const [data, setData] = useState<RiskData | null>(null);
@@ -1410,6 +1410,20 @@ export default function RiskDashboard() {
         )}
       </div>
     </>
+  );
+}
+
+export default function ClaimPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-7xl mx-auto py-32 text-center text-slate-400 italic">
+          Loading claim...
+        </div>
+      }
+    >
+      <RiskDashboard />
+    </Suspense>
   );
 }
 
