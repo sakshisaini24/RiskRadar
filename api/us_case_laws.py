@@ -2,32 +2,161 @@ import os
 import re
 import requests
 
+API_ROOT = "https://www.courtlistener.com/api/rest/v4"
+MAX_EXCERPT_CHARS = 1800
+
 
 class USLawClient:
     """CourtListener v4 client. v3 is restricted for new API tokens."""
 
     def __init__(self):
         self.api_key = os.getenv("COURTLISTENER_API_KEY")
-        self.base_url = "https://www.courtlistener.com/api/rest/v4/search/"
+        self.base_url = f"{API_ROOT}/search/"
         self.groq_key = os.getenv("GROQ_API_KEY")
         if not self.api_key:
             print("[USLawClient] WARNING: COURTLISTENER_API_KEY not set — US search disabled.")
 
+    def _headers(self):
+        return {"Authorization": f"Token {self.api_key}"}
+
     @staticmethod
     def _strip_html(text):
-        return re.sub("<[^<]+?>", "", text or "").strip()
+        cleaned = re.sub("<[^<]+?>", " ", text or "")
+        return re.sub(r"\s+", " ", cleaned).strip()
+
+    @staticmethod
+    def _truncate(text, limit=200):
+        text = (text or "").strip()
+        if len(text) <= limit:
+            return text
+        return text[:limit].rstrip() + "..."
+
+    def _extract_opinion_text(self, payload):
+        """Pull readable text from a CourtListener opinion or cluster payload."""
+        if not payload:
+            return ""
+        for field in (
+            "plain_text",
+            "html_with_citations",
+            "html",
+            "xml_harvard",
+            "html_lawbox",
+            "html_columbia",
+        ):
+            raw = payload.get(field)
+            if not raw:
+                continue
+            text = self._strip_html(raw)
+            if len(text) >= 80:
+                return text[:MAX_EXCERPT_CHARS]
+        return ""
+
+    def _fetch_opinion_excerpt(self, case):
+        """
+        Fetch actual opinion text from CourtListener so summaries stay grounded
+        in source material instead of model memory.
+        """
+        snippet = self._strip_html(case.get("snippet") or case.get("headline") or "")
+        if not self.api_key:
+            return snippet
+
+        headers = self._headers()
+        cluster_id = case.get("cluster_id")
+        opinion_id = case.get("opinion_id")
+
+        fetch_urls = []
+        if opinion_id:
+            fetch_urls.append(f"{API_ROOT}/opinions/{opinion_id}/")
+        if cluster_id:
+            fetch_urls.append(f"{API_ROOT}/clusters/{cluster_id}/")
+
+        for url in fetch_urls:
+            try:
+                resp = requests.get(url, headers=headers, timeout=12)
+                if resp.status_code != 200:
+                    continue
+                data = resp.json()
+                text = self._extract_opinion_text(data)
+                if text:
+                    return text
+
+                sub_opinions = data.get("sub_opinions") or []
+                for sub_url in sub_opinions[:2]:
+                    if not sub_url:
+                        continue
+                    sub_resp = requests.get(sub_url, headers=headers, timeout=12)
+                    if sub_resp.status_code != 200:
+                        continue
+                    text = self._extract_opinion_text(sub_resp.json())
+                    if text:
+                        return text
+            except Exception as e:
+                print(f"[USLawClient] Opinion fetch failed for {url}: {e}")
+
+        if cluster_id:
+            try:
+                resp = requests.get(
+                    f"{API_ROOT}/opinions/",
+                    headers=headers,
+                    params={"cluster": cluster_id, "page_size": 1},
+                    timeout=12,
+                )
+                if resp.status_code == 200:
+                    results = resp.json().get("results") or []
+                    if results:
+                        text = self._extract_opinion_text(results[0])
+                        if text:
+                            return text
+            except Exception as e:
+                print(f"[USLawClient] Cluster opinion lookup failed: {e}")
+
+        return snippet
+
+    @staticmethod
+    def _excerpt_fallback_summary(case, excerpt):
+        """Non-LLM summary when Groq is unavailable or returns unusable text."""
+        title = case.get("title") or "This case"
+        court = case.get("court") or ""
+        date_filed = case.get("date_filed") or ""
+        meta = ", ".join(p for p in (court, date_filed) if p)
+
+        excerpt = re.sub(r"\s+", " ", (excerpt or "").strip())
+        if excerpt:
+            sentences = re.split(r"(?<=[.!?])\s+", excerpt)
+            core = " ".join(s for s in sentences[:3] if s).strip()
+            core = core[:420].rstrip()
+            if meta:
+                return f"{title} ({meta}) discusses insurance-related issues reflected in the retrieved court record. {core}"
+            return f"{title} discusses insurance-related issues reflected in the retrieved court record. {core}"
+
+        if meta:
+            return (
+                f"{title} ({meta}) is indexed on CourtListener as a US opinion relevant "
+                f"to insurance coverage and claims disputes."
+            )
+        return (
+            f"{title} is indexed on CourtListener as a US opinion relevant to "
+            f"insurance coverage and claims disputes."
+        )
 
     def _format_results(self, results, query):
         """Format raw CourtListener results into our schema. Reusable across search methods."""
         formatted = []
         for r in results[:3]:
             title = self._strip_html(r.get("caseName") or "US Insurance Precedent")
-            headline = self._strip_html(r.get("snippet", ""))
+            snippet = self._strip_html(r.get("snippet", ""))
             abs_url = r.get("absolute_url") or ""
+            cluster_id = r.get("cluster_id")
+            opinion_id = r.get("id")
             formatted.append({
-                "docid": str(r.get("id") or r.get("cluster_id") or ""),
+                "docid": str(opinion_id or cluster_id or ""),
+                "opinion_id": str(opinion_id or ""),
+                "cluster_id": str(cluster_id or ""),
                 "title": title,
-                "headline": (headline[:200] + "...") if headline else "",
+                "headline": self._truncate(snippet, 200),
+                "snippet": snippet,
+                "court": r.get("court") or "",
+                "date_filed": r.get("dateFiled") or r.get("date_filed") or "",
                 "jurisdiction": "US",
                 "url": f"https://www.courtlistener.com{abs_url}" if abs_url else "",
                 "match_query": query,
@@ -136,48 +265,58 @@ class USLawClient:
         return generic_results, status, None
 
     def generate_case_brief(self, case):
-        """Generate a 2-3 sentence AI description of a US case using Groq."""
-        if not self.groq_key or not case:
+        """Generate a grounded 2-3 sentence summary from CourtListener source text."""
+        if not case:
             return None
+
+        excerpt = self._fetch_opinion_excerpt(case)
+        if not excerpt:
+            return self._excerpt_fallback_summary(case, case.get("headline", ""))
+
+        if not self.groq_key:
+            return self._excerpt_fallback_summary(case, excerpt)
+
         try:
             from groq import Groq
             client = Groq(api_key=self.groq_key)
+            court = case.get("court") or "Unknown court"
+            date_filed = case.get("date_filed") or "Unknown date"
             prompt = (
-                f"Write a 2-3 sentence professional case summary of the US legal case "
-                f"\"{case.get('title')}\" in the context of insurance law.\n\n"
-                f"Court excerpt (may be partial): \"{case.get('headline', '')}\"\n\n"
+                f"You are summarizing a US court opinion for an insurance claims adjuster.\n\n"
+                f"Case name: {case.get('title')}\n"
+                f"Court: {court}\n"
+                f"Date filed: {date_filed}\n\n"
+                f"Source text from CourtListener (ONLY use facts supported here):\n"
+                f"\"\"\"\n{excerpt}\n\"\"\"\n\n"
+                f"Write exactly 2-3 sentences that:\n"
+                f"1. Identify the insurance or coverage issue discussed in the source text\n"
+                f"2. Summarize the court's reasoning or outcome ONLY as stated in the source\n"
+                f"3. Note practical relevance to claim handling if clearly supported\n\n"
                 f"Rules:\n"
-                f"- If you recognize the case, describe its actual holding.\n"
-                f"- If you do not recognize it, infer what it is likely about from the "
-                f"case name pattern (parties, court, year) and describe the general "
-                f"insurance-law principle it most likely addresses.\n"
-                f"- Write as a confident factual case brief. Do NOT say 'I don't know', "
-                f"'I couldn't find', 'based on the excerpt', or any similar disclaimer.\n"
-                f"- Do NOT mention limitations, sources, or uncertainty.\n"
-                f"- Output ONLY the 2-3 sentence summary. No preamble, no headers."
+                f"- Do NOT rely on outside knowledge of the case\n"
+                f"- Do NOT invent parties, holdings, damages, or procedural history\n"
+                f"- If the source is only a search snippet without a clear holding, describe "
+                f"the legal question or dispute topic it raises without guessing the outcome\n"
+                f"- Do NOT mention excerpts, limitations, or uncertainty\n"
+                f"- Output ONLY the 2-3 sentence summary"
             )
             resp = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=220,
-                temperature=0.4,
+                temperature=0,
             )
-            text = resp.choices[0].message.content.strip()
+            text = (resp.choices[0].message.content or "").strip()
 
-            # Safety net: if the model still refused, provide a generic fallback
             refusal_signals = [
                 "couldn't find", "could not find", "don't have information",
                 "do not have information", "unable to find", "not familiar",
-                "i don't know", "no information available",
+                "i don't know", "no information available", "cannot determine",
+                "outside knowledge", "based on the excerpt",
             ]
-            if any(sig in text.lower() for sig in refusal_signals):
-                return (
-                    f"{case.get('title')} is a US court opinion indexed on CourtListener "
-                    f"as relevant to insurance liability and coverage disputes. The case "
-                    f"contributes to the broader body of US case law governing insurer "
-                    f"obligations, claimant rights, and the handling of contested claims."
-                )
+            if not text or any(sig in text.lower() for sig in refusal_signals):
+                return self._excerpt_fallback_summary(case, excerpt)
             return text
         except Exception as e:
             print(f"[USLawClient] Brief generation failed: {e}")
-            return None
+            return self._excerpt_fallback_summary(case, excerpt)
