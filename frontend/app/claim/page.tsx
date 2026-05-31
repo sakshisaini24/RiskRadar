@@ -163,6 +163,7 @@ interface RiskData {
   communication_audit?: CommunicationAudit | null;
   trigger_analysis?: TriggerAnalysis | null;
   next_action_emails?: NextActionEmails;
+  recommended_actions?: { steps: string[]; source?: string };
 }
 
 const MODEL_META: Record<ModelKey, { label: string; activeClass: string; dotClass: string }> = {
@@ -266,26 +267,33 @@ const signalDisplay = (sig: string) => (sig === "UNAVAILABLE" ? "N/A" : sig);
 
 const extractStrategicAction = (markdown: string | undefined): string[] => {
   if (!markdown) return [];
-  const regex = /(?:\*\*)?Strategic Action(?:\*\*)?\s*:?\s*([\s\S]*?)(?=\n\s*(?:\*\*)?[A-Z][A-Za-z ]{2,40}(?:\*\*)?\s*:|$)/i;
-  const match = markdown.match(regex);
-  if (!match) return [];
-  let actionText = match[1].trim();
-  if (!actionText) return [];
-  if (/(^|\n)\s*[-*•]\s+/.test(actionText) || /\n\s*\*\*[^*]+\*\*\s*:/.test(actionText)) {
-    return actionText
-      .split(/\n+/)
-      .map((l) =>
-        l
-          .replace(/^\s*[-*•]\s+/, "")
-          .replace(/\*\*(.+?)\*\*\s*:?/g, "$1:")
-          .trim()
-      )
-      .filter((l) => l.length > 10);
+  const patterns = [
+    /(?:\*\*)?Strategic Action(?: Plan)?(?:\*\*)?\s*:?\s*([\s\S]*?)(?=\n\s*(?:\*\*)?[A-Z][A-Za-z ]{2,40}(?:\*\*)?\s*:|$)/i,
+    /(?:\*\*)?Recommended Next Step(?:s)?(?:\*\*)?\s*:?\s*([\s\S]*?)(?=\n\s*(?:\*\*)?[A-Z][A-Za-z ]{2,40}(?:\*\*)?\s*:|$)/i,
+  ];
+  for (const regex of patterns) {
+    const match = markdown.match(regex);
+    if (!match?.[1]?.trim()) continue;
+    let actionText = match[1].trim();
+    if (/(^|\n)\s*[-*•]\s+/.test(actionText) || /^\d+[.)]\s+/m.test(actionText)) {
+      return actionText
+        .split(/\n+/)
+        .map((l) =>
+          l
+            .replace(/^\s*\d+[.)]\s+/, "")
+            .replace(/^\s*[-*•]\s+/, "")
+            .replace(/\*\*(.+?)\*\*\s*:?/g, "$1:")
+            .trim()
+        )
+        .filter((l) => l.length > 10);
+    }
+    const sentences = actionText
+      .split(/(?<=[.!?])\s+(?=[A-Z])/)
+      .map((s) => s.replace(/\*\*/g, "").trim())
+      .filter((s) => s.length > 15);
+    if (sentences.length) return sentences;
   }
-  return actionText
-    .split(/(?<=[.!?])\s+(?=[A-Z])/)
-    .map((s) => s.replace(/\*\*/g, "").trim())
-    .filter((s) => s.length > 15);
+  return [];
 };
 
 const looksLikeError = (text: string | undefined): boolean => {
@@ -405,7 +413,14 @@ function RiskDashboard() {
 
   const strategicActionPoints = useMemo(() => {
     if (!data) return [];
-    return extractStrategicAction(data.ai_consensus[activeModel]);
+    if (data.recommended_actions?.steps?.length) {
+      return data.recommended_actions.steps;
+    }
+    const fromBrief = extractStrategicAction(data.ai_consensus[activeModel]);
+    if (fromBrief.length) return fromBrief;
+    return extractStrategicAction(
+      data.ai_consensus.groq_llama || data.ai_consensus.google_gemini
+    );
   }, [data, activeModel]);
 
   const activeModelText = data?.ai_consensus[activeModel];
@@ -776,7 +791,14 @@ function RiskDashboard() {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-white/70 italic">Action plan will appear here.</p>
+                    <p className="text-sm text-white/70 italic">
+                      Action plan will appear here once analysis completes (requires GROQ_API_KEY or uses rule-based steps).
+                    </p>
+                  )}
+                  {data.recommended_actions?.source && strategicActionPoints.length > 0 && (
+                    <p className="text-[9px] text-white/50 mt-3 uppercase tracking-wider">
+                      Source: {data.recommended_actions.source}
+                    </p>
                   )}
                 </div>
 

@@ -17,6 +17,7 @@ from api.us_case_laws import USLawClient
 from api.metrics import compute_metrics, get_metrics, get_holdout_scores
 from api.trigger_phrases import detect_triggers
 from api.next_action import generate_emails
+from api.action_plan import generate_action_plan, extract_from_brief
 from api.consensus_analysis import analyze_consensus
 from api.risk_calibrator import calibrate_risk
 from api.time_to_escalation import predict_timeline, model_stats as tte_stats
@@ -475,6 +476,33 @@ async def get_prediction(claim_id: str):
         email_excerpt=email_text,
     )
 
+    brief_for_plan = (
+        ai_consensus_briefs.get("groq_llama")
+        or ai_consensus_briefs.get("google_gemini")
+        or ""
+    )
+    brief_ok = bool(
+        brief_for_plan
+        and "error:" not in str(brief_for_plan).lower()
+        and "key missing" not in str(brief_for_plan).lower()
+    )
+
+    recommended_actions = generate_action_plan(
+        claim_id=claim_id,
+        risk_pct=risk_pct,
+        is_high_risk=is_high_risk,
+        incident=incident,
+        trigger_phrases=trigger_phrases,
+        top_warnings=top_warnings,
+        brief_text=brief_for_plan if brief_ok else "",
+    )
+    if not recommended_actions.get("steps"):
+        fallback = extract_from_brief(ai_consensus_briefs.get("groq_llama"))
+        if not fallback:
+            fallback = extract_from_brief(ai_consensus_briefs.get("google_gemini"))
+        if fallback:
+            recommended_actions = {"steps": fallback, "source": "brief"}
+
     timeline = predict_timeline(claim_id)
     similar = find_similar(claim_id, top_k=5)
 
@@ -499,6 +527,7 @@ async def get_prediction(claim_id: str):
         "communication_audit": unstructured,
         "trigger_analysis": triggers,
         "next_action_emails": next_action_emails,
+        "recommended_actions": recommended_actions,
     }
 
     PREDICT_CACHE[claim_id] = response
