@@ -37,6 +37,57 @@ class RiskRadarEnsemble:
         # Find text columns dynamically once during init
         self.text_cols = [col for col in self.text_data.columns if any(word in col.lower() for word in ['desc', 'note', 'transcript', 'email', 'text'])]
 
+        # Median feature defaults for Salesforce / external claims
+        feat_cols = self.feature_matrix.drop(columns=["claim_id", "target"], errors="ignore")
+        self._feature_medians = feat_cols.median(numeric_only=True)
+
+    def _score_text(self, combined_text: str) -> float:
+        text = (combined_text or "").strip()
+        if not text:
+            return 0.5
+        X_b = self.vectorizer_b.transform([text])
+        return float(self.model_b.predict_proba(X_b)[0, 1])
+
+    def score_external(self, claim_id: str, combined_text: str, feature_row: dict):
+        """
+        Score a Salesforce claim: Model B on text + approximate Model A from SF fields.
+        """
+        prob_b = self._score_text(combined_text)
+        prob_a = 0.5
+        warning_signs = []
+
+        names = self.meta_a["feature_names"]
+        row = {n: float(self._feature_medians.get(n, 0)) for n in names}
+        for k, v in (feature_row or {}).items():
+            if k in row and v is not None:
+                try:
+                    row[k] = float(v)
+                except (TypeError, ValueError):
+                    pass
+
+        X_a = pd.DataFrame([row])[names]
+        prob_a = float(self.model_a.predict_proba(X_a)[0, 1])
+
+        shap_values = self.explainer_a.shap_values(X_a)
+        feature_importance = pd.Series(shap_values[0], index=names)
+        for feat, val in feature_importance.sort_values(ascending=False).head(3).items():
+            if val > 0:
+                warning_signs.append(f"{feat.replace('_', ' ').title()}")
+
+        final_score = (prob_a * 0.4) + (prob_b * 0.6)
+        if not warning_signs:
+            warning_signs = ["Salesforce claim — activity text signals"]
+
+        return {
+            "claim_id": str(claim_id),
+            "risk_score_pct": float(round(final_score * 100, 1)),
+            "is_high_risk": bool(final_score >= self.meta_a["optimal_threshold"]),
+            "model_a_contribution": float(round(prob_a * 100, 1)),
+            "model_b_contribution": float(round(prob_b * 100, 1)),
+            "top_warning_signs": warning_signs,
+            "scoring_mode": "salesforce_hybrid",
+        }
+
     def get_risk_score(self, claim_id):
         """Calculates a weighted probability from both models."""
         

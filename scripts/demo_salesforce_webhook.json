@@ -1,0 +1,37 @@
+{
+  "salesforce_case_id": "500DEMO0000001ABC",
+  "salesforce_case_number": "00001234",
+  "claim_id": "SF-00001234",
+  "claimant_name": "Jane Smith",
+  "subject": "Auto collision — claimant mentions attorney",
+  "description": "Rear-end collision on I-35. Claimant dissatisfied with initial offer. Vehicle damage to rear bumper and trunk.",
+  "state": "TX",
+  "policy_type": "Auto",
+  "incident_type": "Collision",
+  "injury_severity": "Minor Soft Tissue",
+  "days_open": 12,
+  "total_claimed": 42000,
+  "insurer_offer": 18000,
+  "followup_contacts": 3,
+  "doc_requests": 2,
+  "disputed_items": 1,
+  "inspections": 1,
+  "legal_rep": "Attorney",
+  "adjuster_level": "Junior",
+  "payment_status": "Disputed",
+  "activities": [
+    {
+      "type": "email",
+      "subject": "Re: Your claim status",
+      "body": "This delay is unacceptable. I have consulted my attorney and expect a formal response within 48 hours."
+    },
+    {
+      "type": "call",
+      "summary": "Claimant frustrated; mentioned possible Department of Insurance complaint."
+    },
+    {
+      "type": "note",
+      "body": "CONTACT LOG: Tone hostile. Claimant refused current offer. Requested supervisor callback."
+    }
+  ]
+}

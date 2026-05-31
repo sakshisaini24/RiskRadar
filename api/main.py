@@ -1,9 +1,11 @@
 import json
 import os
 import re
+from typing import Any, Dict, Optional
+
 import pandas as pd
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
@@ -22,6 +24,13 @@ from api.similar_claims import find_similar, index_stats as sim_stats
 from api.fairness import compute as compute_fairness
 from api.feedback import FeedbackPayload, record as record_feedback, summary as feedback_summary, for_claim as feedback_for_claim
 from api.drift import compute as compute_drift
+from api.external_claims import combined_text, get as get_external_claim, list_all as list_external_claims
+from api.sf_scoring import build_feature_row
+from api.integrations.salesforce import (
+    ingest_from_webhook,
+    pull_open_cases,
+    verify_webhook_secret,
+)
 
 load_dotenv()
 
@@ -42,6 +51,7 @@ ai_factory = BriefGenerator()
 
 LEGAL_CACHE = {}
 PREDICT_CACHE = {}
+
 
 try:
     STRUCTURED_DATA = pd.read_csv("data/processed/structured_clean.csv")
@@ -77,6 +87,7 @@ async def health():
     return {
         "status": "ok",
         "structured_rows": len(STRUCTURED_DATA) if not STRUCTURED_DATA.empty else 0,
+        "external_claims": len(list_external_claims()),
     }
 
 
@@ -93,9 +104,21 @@ async def _startup():
 
 
 def get_unstructured_for_claim(claim_id):
+    cid = str(claim_id).strip()
+    ext = get_external_claim(cid)
+    if ext:
+        return {
+            "incident_description": ext.get("incident_description") or "",
+            "adjuster_notes": ext.get("adjuster_notes") or "",
+            "email_transcript": ext.get("email_transcript") or "",
+            "source": "salesforce",
+            "salesforce_case_id": ext.get("salesforce_case_id"),
+            "salesforce_case_number": ext.get("salesforce_case_number"),
+            "activities": ext.get("activities") or [],
+        }
+
     if UNSTRUCTURED_DATA.empty:
         return None
-    cid = str(claim_id).strip()
     match = UNSTRUCTURED_DATA[UNSTRUCTURED_DATA["Claim ID"] == cid]
     if match.empty:
         return None
@@ -110,7 +133,54 @@ def get_unstructured_for_claim(claim_id):
         "incident_description": clean(row.get("Accident / Incident Description (Unstructured)")),
         "adjuster_notes": clean(row.get("Adjuster Field Notes (Unstructured)")),
         "email_transcript": clean(row.get("Email Transcript — Claimant (Unstructured)")),
+        "source": "dataset",
     }
+
+
+def _score_claim(cid: str, email_text: str = "", adjuster_text: str = "", genai_df=None):
+    raw = ensemble.get_risk_score(cid)
+    if not raw:
+        ext = get_external_claim(cid)
+        if ext:
+            text = combined_text(ext)
+            features = build_feature_row(ext)
+            raw = ensemble.score_external(cid, text, features)
+        else:
+            return None, None, None
+    triggers = detect_triggers(cid, email_text, adjuster_text, genai_df=genai_df)
+    calibrated = calibrate_risk(raw, triggers, email_text, adjuster_text)
+    return raw, triggers, calibrated
+
+
+def _queue_row(row_dict: Dict[str, Any], source: str) -> Dict[str, Any]:
+    cid = row_dict["claim_id"]
+    email_text = row_dict.get("email_text", "")
+    adjuster_text = row_dict.get("adjuster_text", "")
+    risk, is_high = 0.0, False
+    try:
+        _, _, calibrated = _score_claim(cid, email_text, adjuster_text, genai_df=GENAI_DATA)
+        if calibrated:
+            risk = float(calibrated.get("risk_score_pct", 0))
+            is_high = bool(calibrated.get("is_high_risk", False))
+    except Exception as e:
+        print(f"[claims] Error for {cid}: {e}")
+
+    out = {
+        "claim_id": cid,
+        "claimant_name": row_dict.get("claimant_name", ""),
+        "policy_type": row_dict.get("policy_type", ""),
+        "incident_type": str(row_dict.get("incident_type", "")).strip("[]'\""),
+        "days_open": int(row_dict.get("days_open") or 0),
+        "total_claimed": float(row_dict.get("total_claimed") or 0),
+        "state": row_dict.get("state", ""),
+        "risk_score_pct": round(risk, 2),
+        "is_high_risk": is_high,
+        "source": source,
+    }
+    if source == "salesforce":
+        out["salesforce_case_id"] = row_dict.get("salesforce_case_id")
+        out["salesforce_case_number"] = row_dict.get("salesforce_case_number")
+    return out
 
 
 def get_legal_context(incident, trigger_phrases=None, top_warnings=None):
@@ -223,60 +293,113 @@ async def evaluation_plot(name: str):
     return FileResponse(path, media_type="image/png")
 
 
+@app.post("/integrations/salesforce/webhook")
+async def salesforce_webhook(
+    request: Request,
+    x_riskradar_secret: Optional[str] = Header(None, alias="X-RiskRadar-Secret"),
+):
+    """Inbound from Salesforce when a Case is created or updated."""
+    if not verify_webhook_secret(x_riskradar_secret):
+        raise HTTPException(status_code=401, detail="Invalid webhook secret")
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="JSON body required")
+    try:
+        result = ingest_from_webhook(body)
+        PREDICT_CACHE.pop(result["claim_id"], None)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/integrations/salesforce/sync")
+async def salesforce_sync(limit: int = 20):
+    """Pull open Cases via Salesforce REST (optional)."""
+    ids, err = pull_open_cases(limit=limit)
+    if err:
+        raise HTTPException(status_code=503, detail=err)
+    for cid in ids:
+        PREDICT_CACHE.pop(cid, None)
+    return {"status": "ok", "ingested": len(ids), "claim_ids": ids}
+
+
+@app.get("/integrations/salesforce/status")
+async def salesforce_status():
+    ext = list_external_claims()
+    return {
+        "external_claim_count": len(ext),
+        "webhook_secret_configured": bool(os.getenv("SALESFORCE_WEBHOOK_SECRET")),
+        "oauth_configured": bool(os.getenv("SF_REFRESH_TOKEN")),
+        "recent": [
+            {
+                "claim_id": c["claim_id"],
+                "salesforce_case_id": c.get("salesforce_case_id"),
+                "salesforce_case_number": c.get("salesforce_case_number"),
+            }
+            for c in ext[:5]
+        ],
+    }
+
+
 @app.get("/claims")
 async def claims_list():
-    """Queue list — uses calibrated scores so the rankings match the detail view."""
-    if STRUCTURED_DATA.empty:
-        return {"claims": [], "total": 0}
-
+    """Dataset claims + Salesforce-ingested claims."""
     claims = []
-    for _, row in STRUCTURED_DATA.iterrows():
-        cid = row.get("claim_id")
-        risk = 0.0
-        is_high = False
-        try:
-            raw = ensemble.get_risk_score(cid)
-            if raw:
-                # Get unstructured for calibration
-                email_text, adjuster_text, triggers = "", "", None
-                if not UNSTRUCTURED_DATA.empty:
-                    u = UNSTRUCTURED_DATA[UNSTRUCTURED_DATA["Claim ID"] == cid]
-                    if not u.empty:
-                        email_text = str(u.iloc[0].get("Email Transcript — Claimant (Unstructured)", "") or "")
-                        adjuster_text = str(u.iloc[0].get("Adjuster Field Notes (Unstructured)", "") or "")
-                        triggers = detect_triggers(cid, email_text, adjuster_text, genai_df=GENAI_DATA)
+    seen = set()
 
-                calibrated = calibrate_risk(raw, triggers, email_text, adjuster_text)
-                risk = float(calibrated.get("risk_score_pct", 0))
-                is_high = bool(calibrated.get("is_high_risk", False))
-        except Exception as e:
-            print(f"[claims] Error for {cid}: {e}")
+    if not STRUCTURED_DATA.empty:
+        for _, row in STRUCTURED_DATA.iterrows():
+            cid = str(row.get("claim_id"))
+            seen.add(cid)
+            email_text, adjuster_text = "", ""
+            if not UNSTRUCTURED_DATA.empty:
+                u = UNSTRUCTURED_DATA[UNSTRUCTURED_DATA["Claim ID"] == cid]
+                if not u.empty:
+                    email_text = str(u.iloc[0].get("Email Transcript — Claimant (Unstructured)", "") or "")
+                    adjuster_text = str(u.iloc[0].get("Adjuster Field Notes (Unstructured)", "") or "")
+            claims.append(_queue_row({
+                "claim_id": cid,
+                "claimant_name": str(row.get("claimant_name", "") or ""),
+                "policy_type": str(row.get("policy_type", "") or ""),
+                "incident_type": row.get("incident_type", ""),
+                "days_open": row.get("days_open", 0),
+                "total_claimed": row.get("total_claimed", 0),
+                "state": str(row.get("state", "") or ""),
+                "email_text": email_text,
+                "adjuster_text": adjuster_text,
+            }, "dataset"))
 
-        claims.append({
+    for ext in list_external_claims():
+        cid = str(ext["claim_id"])
+        if cid in seen:
+            continue
+        seen.add(cid)
+        claims.append(_queue_row({
             "claim_id": cid,
-            "claimant_name": str(row.get("claimant_name", row.get("Claimant Name", "")) or ""),
-            "policy_type": str(row.get("policy_type", row.get("Policy Type", "")) or ""),
-            "incident_type": str(row.get("incident_type", row.get("Incident Type", "")) or "").strip("[]'\""),
-            "days_open": int(row.get("days_open", row.get("Days Open", 0)) or 0),
-            "total_claimed": float(row.get("total_claimed", row.get("Total Claimed ($)", 0)) or 0),
-            "state": str(row.get("state", row.get("State", "")) or ""),
-            "risk_score_pct": round(risk, 2),
-            "is_high_risk": is_high,
-        })
+            "claimant_name": ext.get("claimant_name") or "Salesforce Case",
+            "policy_type": ext.get("policy_type") or "Unknown",
+            "incident_type": ext.get("incident_type") or "insurance",
+            "days_open": ext.get("days_open") or 0,
+            "total_claimed": ext.get("total_claimed") or 0,
+            "state": ext.get("state") or "",
+            "email_text": ext.get("email_transcript") or "",
+            "adjuster_text": ext.get("adjuster_notes") or "",
+            "salesforce_case_id": ext.get("salesforce_case_id"),
+            "salesforce_case_number": ext.get("salesforce_case_number"),
+        }, "salesforce"))
 
     claims.sort(key=lambda c: c["risk_score_pct"], reverse=True)
-
     total = len(claims)
-    high_risk_count = sum(1 for c in claims if c["is_high_risk"])
-    avg_risk = sum(c["risk_score_pct"] for c in claims) / total if total else 0
-    avg_days = sum(c["days_open"] for c in claims) / total if total else 0
+    sf_count = sum(1 for c in claims if c.get("source") == "salesforce")
 
     return {
         "claims": claims,
         "total": total,
-        "high_risk_count": high_risk_count,
-        "avg_risk": round(avg_risk, 2),
-        "avg_days_open": round(avg_days, 1),
+        "high_risk_count": sum(1 for c in claims if c["is_high_risk"]),
+        "avg_risk": round(sum(c["risk_score_pct"] for c in claims) / total, 2) if total else 0,
+        "avg_days_open": round(sum(c["days_open"] for c in claims) / total, 1) if total else 0,
+        "salesforce_count": sf_count,
     }
 
 
@@ -287,31 +410,24 @@ async def get_prediction(claim_id: str):
     if claim_id in PREDICT_CACHE:
         return PREDICT_CACHE[claim_id]
 
-    raw_results = ensemble.get_risk_score(claim_id)
-    if not raw_results:
+    unstructured = get_unstructured_for_claim(claim_id)
+    email_text = unstructured.get("email_transcript", "") if unstructured else ""
+    adjuster_text = unstructured.get("adjuster_notes", "") if unstructured else ""
+
+    _, triggers, results = _score_claim(
+        claim_id, email_text, adjuster_text, genai_df=GENAI_DATA
+    )
+    if not results:
         raise HTTPException(status_code=404, detail="Claim not found")
 
     incident = "insurance"
-    if not STRUCTURED_DATA.empty:
+    ext = get_external_claim(claim_id)
+    if ext:
+        incident = str(ext.get("incident_type") or "insurance").strip("[]'\"")
+    elif not STRUCTURED_DATA.empty:
         match = STRUCTURED_DATA[STRUCTURED_DATA["claim_id"] == claim_id]
         if not match.empty:
             incident = str(match.iloc[0].get("incident_type", "insurance")).strip("[]'\"")
-
-    unstructured = get_unstructured_for_claim(claim_id)
-
-    triggers = None
-    if unstructured:
-        triggers = detect_triggers(
-            claim_id,
-            unstructured.get("email_transcript", ""),
-            unstructured.get("adjuster_notes", ""),
-            genai_df=GENAI_DATA,
-        )
-
-    # CALIBRATE the risk score using both structured + unstructured signal
-    email_text = unstructured.get("email_transcript", "") if unstructured else ""
-    adjuster_text = unstructured.get("adjuster_notes", "") if unstructured else ""
-    results = calibrate_risk(raw_results, triggers, email_text, adjuster_text)
 
     risk_pct = float(results.get("risk_score_pct", 0))
     is_high_risk = bool(results.get("is_high_risk", False))
@@ -344,6 +460,9 @@ async def get_prediction(claim_id: str):
 
     response = {
         "claim_id": claim_id,
+        "source": (unstructured or {}).get("source", "dataset"),
+        "salesforce_case_id": (unstructured or {}).get("salesforce_case_id"),
+        "salesforce_case_number": (unstructured or {}).get("salesforce_case_number"),
         "ml_analysis": results,
         "timeline": timeline,
         "similar_claims": similar,

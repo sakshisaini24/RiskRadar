@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
-/** Empty env = same origin (Docker/nginx). Local dev defaults to :8000. */
+/** Same origin in Docker/Render; localhost:8000 for local dev. */
 function resolveApiBase(): string {
   const env = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (env && env.length > 0) return env.replace(/\/$/, "");
@@ -27,6 +27,9 @@ interface QueueClaim {
   state: string;
   risk_score_pct: number;
   is_high_risk: boolean;
+  source?: "dataset" | "salesforce";
+  salesforce_case_id?: string;
+  salesforce_case_number?: string;
 }
 
 interface QueueData {
@@ -950,7 +953,14 @@ export default function ClaimsQueue() {
                             </div>
                           </div>
                         </td>
-                        <td className="p-4 font-mono text-xs text-slate-700">{c.claim_id}</td>
+                        <td className="p-4 font-mono text-xs text-slate-700">
+                          <div>{c.claim_id}</div>
+                          {c.source === "salesforce" && (
+                            <span className="inline-block mt-1 text-[9px] font-black uppercase tracking-wider text-[#0176D3] bg-[#E8F4FD] border border-[#B4D9F5] px-1.5 py-0.5 rounded">
+                              Salesforce
+                            </span>
+                          )}
+                        </td>
                         <td className="p-4 font-medium">{c.claimant_name}</td>
                         <td className="p-4 text-slate-600">{c.policy_type}</td>
                         <td className="p-4 text-slate-600">{c.incident_type}</td>

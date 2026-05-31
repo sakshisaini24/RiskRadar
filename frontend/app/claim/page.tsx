@@ -131,6 +131,9 @@ interface CalibrationInfo {
 
 interface RiskData {
   claim_id: string;
+  source?: "dataset" | "salesforce";
+  salesforce_case_id?: string;
+  salesforce_case_number?: string;
   ml_analysis: {
     claim_id: string;
     risk_score_pct: number;
@@ -511,6 +514,16 @@ function RiskDashboard() {
           <p className="text-slate-500 font-medium">
             Deep-dive risk intelligence for an individual claim
           </p>
+          {data?.source === "salesforce" && (
+            <div className="mt-2 inline-flex items-center gap-2 text-[11px] text-[#0176D3] bg-[#E8F4FD] border border-[#B4D9F5] rounded-full px-3 py-1 font-bold">
+              Salesforce Case
+              {(data.salesforce_case_number || data.salesforce_case_id) && (
+                <span className="font-mono font-normal opacity-80">
+                  {data.salesforce_case_number || data.salesforce_case_id}
+                </span>
+              )}
+            </div>
+          )}
           {metrics?.status === "ok" && (
             <div className="mt-3 inline-flex items-center gap-2 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
