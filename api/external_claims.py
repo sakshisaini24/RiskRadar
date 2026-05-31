@@ -30,6 +30,8 @@ def _ensure():
                 salesforce_case_id TEXT,
                 salesforce_case_number TEXT,
                 claimant_name TEXT,
+                age INTEGER,
+                marital_status TEXT,
                 policy_type TEXT,
                 incident_type TEXT,
                 injury_severity TEXT,
@@ -60,6 +62,14 @@ def _ensure():
 
 
 _ensure()
+
+
+def _migrate_columns(conn):
+    """Add columns for older SQLite DBs without recreating the table."""
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(external_claims)")}
+    for name, typedef in [("age", "INTEGER"), ("marital_status", "TEXT")]:
+        if name not in existing:
+            conn.execute(f"ALTER TABLE external_claims ADD COLUMN {name} {typedef}")
 
 
 def _activities_to_text(payload: Dict[str, Any]) -> tuple[str, str]:
@@ -131,6 +141,8 @@ def upsert(payload: Dict[str, Any]) -> Dict[str, Any]:
             or payload.get("Subject")
             or "Salesforce Case"
         ),
+        "age": _optional_int(payload.get("age") or payload.get("Age") or payload.get("ContactAge")),
+        "marital_status": str(payload.get("marital_status") or payload.get("Marital_Status__c") or ""),
         "policy_type": str(
             payload.get("policy_type") or structured.get("policy_type") or payload.get("Policy_Type__c") or "Unknown"
         ),
@@ -164,10 +176,12 @@ def upsert(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     with _conn() as conn:
+        _migrate_columns(conn)
         conn.execute(
             """
             INSERT INTO external_claims (
                 claim_id, salesforce_case_id, salesforce_case_number, claimant_name,
+                age, marital_status,
                 policy_type, incident_type, injury_severity, state, days_open,
                 total_claimed, insurer_offer, settlement_gap_pct, policy_tenure_yrs,
                 followup_contacts, doc_requests, disputed_items, inspections,
@@ -176,6 +190,7 @@ def upsert(payload: Dict[str, Any]) -> Dict[str, Any]:
                 activities_json, structured_json, raw_json, updated_at
             ) VALUES (
                 :claim_id, :salesforce_case_id, :salesforce_case_number, :claimant_name,
+                :age, :marital_status,
                 :policy_type, :incident_type, :injury_severity, :state, :days_open,
                 :total_claimed, :insurer_offer, :settlement_gap_pct, :policy_tenure_yrs,
                 :followup_contacts, :doc_requests, :disputed_items, :inspections,
@@ -187,6 +202,8 @@ def upsert(payload: Dict[str, Any]) -> Dict[str, Any]:
                 salesforce_case_id=excluded.salesforce_case_id,
                 salesforce_case_number=excluded.salesforce_case_number,
                 claimant_name=excluded.claimant_name,
+                age=excluded.age,
+                marital_status=excluded.marital_status,
                 policy_type=excluded.policy_type,
                 incident_type=excluded.incident_type,
                 injury_severity=excluded.injury_severity,
@@ -247,6 +264,15 @@ def list_all() -> List[Dict[str, Any]]:
             "SELECT claim_id FROM external_claims ORDER BY updated_at DESC"
         ).fetchall()
     return [get(r["claim_id"]) for r in rows if get(r["claim_id"])]
+
+
+def _optional_int(val) -> Optional[int]:
+    if val is None or val == "":
+        return None
+    try:
+        return int(float(val))
+    except (TypeError, ValueError):
+        return None
 
 
 def combined_text(row: Dict[str, Any]) -> str:

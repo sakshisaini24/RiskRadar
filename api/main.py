@@ -114,7 +114,11 @@ def get_unstructured_for_claim(claim_id):
             "source": "salesforce",
             "salesforce_case_id": ext.get("salesforce_case_id"),
             "salesforce_case_number": ext.get("salesforce_case_number"),
+            "claimant_name": ext.get("claimant_name"),
+            "age": ext.get("age"),
+            "marital_status": ext.get("marital_status"),
             "activities": ext.get("activities") or [],
+            "activities_count": len(ext.get("activities") or []),
         }
 
     if UNSTRUCTURED_DATA.empty:

@@ -3,6 +3,8 @@
   "salesforce_case_number": "00001234",
   "claim_id": "SF-00001234",
   "claimant_name": "Jane Smith",
+  "age": 42,
+  "marital_status": "Married",
   "subject": "Auto collision — claimant mentions attorney",
   "description": "Rear-end collision on I-35. Claimant dissatisfied with initial offer. Vehicle damage to rear bumper and trunk.",
   "state": "TX",

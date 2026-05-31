@@ -47,6 +47,8 @@ def normalize_webhook_payload(body: Dict[str, Any]) -> Dict[str, Any]:
         "salesforce_case_id": str(sf_id or "").strip(),
         "salesforce_case_number": str(case_num or "").strip(),
         "claimant_name": body.get("claimant_name") or body.get("ContactName") or body.get("Subject") or body.get("subject"),
+        "age": body.get("age") or body.get("ContactAge"),
+        "marital_status": body.get("marital_status") or body.get("Marital_Status__c"),
         "incident_description": body.get("incident_description") or body.get("Description") or body.get("description"),
         "email_transcript": body.get("email_transcript") or "",
         "adjuster_notes": body.get("adjuster_notes") or "",
