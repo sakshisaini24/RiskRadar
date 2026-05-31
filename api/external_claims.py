@@ -1,9 +1,8 @@
 """
 Persist claims ingested from Salesforce.
 
-Maps to RiskRadar dataset fields:
-  structured  → structured_clean.csv columns (policy_type, days_open, total_claimed, …)
-  unstructured → text_clean.csv (incident, adjuster notes, email transcript)
+Uses a JSON file on disk (survives local restarts) plus optional SQLite legacy.
+Paths are anchored to the project root so cwd does not matter.
 """
 import json
 import os
@@ -11,69 +10,100 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-DB_PATH = os.getenv("EXTERNAL_CLAIMS_DB", "data/external_claims.db")
+# Project root = parent of api/
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+STORE_PATH = os.getenv(
+    "EXTERNAL_CLAIMS_STORE",
+    os.path.join(_ROOT, "data", "external_claims_store.json"),
+)
+DB_PATH = os.getenv(
+    "EXTERNAL_CLAIMS_DB",
+    os.path.join(_ROOT, "data", "external_claims.db"),
+)
+
+_STORE: Dict[str, Dict[str, Any]] = {}
 
 
-def _conn():
-    os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
-    c = sqlite3.connect(DB_PATH)
-    c.row_factory = sqlite3.Row
-    return c
+def _ensure_data_dir():
+    os.makedirs(os.path.dirname(STORE_PATH) or ".", exist_ok=True)
 
 
-def _ensure():
-    with _conn() as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS external_claims (
-                claim_id TEXT PRIMARY KEY,
-                salesforce_case_id TEXT,
-                salesforce_case_number TEXT,
-                claimant_name TEXT,
-                age INTEGER,
-                marital_status TEXT,
-                policy_type TEXT,
-                incident_type TEXT,
-                injury_severity TEXT,
-                state TEXT,
-                days_open INTEGER DEFAULT 0,
-                total_claimed REAL DEFAULT 0,
-                insurer_offer REAL DEFAULT 0,
-                settlement_gap_pct REAL DEFAULT 0,
-                policy_tenure_yrs REAL DEFAULT 0,
-                followup_contacts INTEGER DEFAULT 0,
-                doc_requests INTEGER DEFAULT 0,
-                disputed_items INTEGER DEFAULT 0,
-                inspections INTEGER DEFAULT 0,
-                legal_rep TEXT,
-                adjuster_level TEXT,
-                payment_status TEXT,
-                doi_complaint INTEGER DEFAULT 0,
-                email_transcript TEXT,
-                adjuster_notes TEXT,
-                incident_description TEXT,
-                activities_json TEXT,
-                structured_json TEXT,
-                raw_json TEXT,
-                updated_at TEXT NOT NULL
-            )
-            """
-        )
+def _hydrate_record(raw: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize stored row for API consumers."""
+    d = dict(raw)
+    if "activities_json" in d and "activities" not in d:
+        try:
+            d["activities"] = json.loads(d.get("activities_json") or "[]")
+        except Exception:
+            d["activities"] = []
+        d.pop("activities_json", None)
+    if "structured_json" in d and "structured" not in d:
+        try:
+            d["structured"] = json.loads(d.get("structured_json") or "{}")
+        except Exception:
+            d["structured"] = {}
+        d.pop("structured_json", None)
+    d.pop("raw_json", None)
+    return d
 
 
-_ensure()
+def _load_json_store() -> Dict[str, Dict[str, Any]]:
+    _ensure_data_dir()
+    if not os.path.exists(STORE_PATH):
+        return {}
+    try:
+        with open(STORE_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            return {str(r["claim_id"]): r for r in data if r.get("claim_id")}
+        if isinstance(data, dict):
+            return {str(k): v for k, v in data.items()}
+    except Exception as e:
+        print(f"[external_claims] Failed to load JSON store: {e}")
+    return {}
 
 
-def _migrate_columns(conn):
-    """Add columns for older SQLite DBs without recreating the table."""
-    existing = {row[1] for row in conn.execute("PRAGMA table_info(external_claims)")}
-    for name, typedef in [("age", "INTEGER"), ("marital_status", "TEXT")]:
-        if name not in existing:
-            conn.execute(f"ALTER TABLE external_claims ADD COLUMN {name} {typedef}")
+def _save_json_store():
+    _ensure_data_dir()
+    tmp = STORE_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(_STORE, f, indent=2, default=str)
+    os.replace(tmp, STORE_PATH)
+
+
+def _migrate_sqlite_to_json():
+    """One-time import if JSON empty but legacy SQLite has rows."""
+    if _STORE or not os.path.exists(DB_PATH):
+        return
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("SELECT * FROM external_claims").fetchall()
+        conn.close()
+        for r in rows:
+            rec = _hydrate_record(dict(r))
+            cid = str(rec.get("claim_id", "")).strip()
+            if cid:
+                _STORE[cid] = rec
+        if _STORE:
+            _save_json_store()
+            print(f"[external_claims] Migrated {len(_STORE)} claim(s) from SQLite → JSON")
+    except Exception as e:
+        print(f"[external_claims] SQLite migration skipped: {e}")
+
+
+def reload_from_disk():
+    """Call on startup to refresh in-memory store."""
+    global _STORE
+    _STORE = _load_json_store()
+    _migrate_sqlite_to_json()
+    print(f"[external_claims] Loaded {len(_STORE)} Salesforce claim(s) from {STORE_PATH}")
+
+
+reload_from_disk()
 
 
 def _activities_to_text(payload: Dict[str, Any]) -> tuple[str, str]:
-    """Split activities into email transcript vs adjuster notes."""
     activities = payload.get("activities") or []
     if not isinstance(activities, list):
         activities = []
@@ -100,8 +130,7 @@ def _activities_to_text(payload: Dict[str, Any]) -> tuple[str, str]:
         if kind in ("email", "emailmessage"):
             email_parts.append(block)
         elif kind in ("call", "task", "note", "log"):
-            prefix = f"[{kind.upper()}] "
-            note_parts.append(prefix + block)
+            note_parts.append(f"[{kind.upper()}] {block}")
 
     email = (payload.get("email_transcript") or "\n\n---\n\n".join(email_parts)).strip()
     notes = (payload.get("adjuster_notes") or "\n\n---\n\n".join(note_parts)).strip()
@@ -125,7 +154,9 @@ def upsert(payload: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(structured, dict):
         structured = {}
 
+    activities = payload.get("activities") or []
     now = datetime.now(timezone.utc).isoformat()
+
     row = {
         "claim_id": claim_id,
         "salesforce_case_id": str(
@@ -169,101 +200,24 @@ def upsert(payload: Dict[str, Any]) -> Dict[str, Any]:
         "email_transcript": email_transcript,
         "adjuster_notes": adjuster_notes,
         "incident_description": incident_description,
-        "activities_json": json.dumps(payload.get("activities") or []),
-        "structured_json": json.dumps(structured),
-        "raw_json": json.dumps(payload),
+        "activities": activities,
         "updated_at": now,
     }
 
-    with _conn() as conn:
-        _migrate_columns(conn)
-        conn.execute(
-            """
-            INSERT INTO external_claims (
-                claim_id, salesforce_case_id, salesforce_case_number, claimant_name,
-                age, marital_status,
-                policy_type, incident_type, injury_severity, state, days_open,
-                total_claimed, insurer_offer, settlement_gap_pct, policy_tenure_yrs,
-                followup_contacts, doc_requests, disputed_items, inspections,
-                legal_rep, adjuster_level, payment_status, doi_complaint,
-                email_transcript, adjuster_notes, incident_description,
-                activities_json, structured_json, raw_json, updated_at
-            ) VALUES (
-                :claim_id, :salesforce_case_id, :salesforce_case_number, :claimant_name,
-                :age, :marital_status,
-                :policy_type, :incident_type, :injury_severity, :state, :days_open,
-                :total_claimed, :insurer_offer, :settlement_gap_pct, :policy_tenure_yrs,
-                :followup_contacts, :doc_requests, :disputed_items, :inspections,
-                :legal_rep, :adjuster_level, :payment_status, :doi_complaint,
-                :email_transcript, :adjuster_notes, :incident_description,
-                :activities_json, :structured_json, :raw_json, :updated_at
-            )
-            ON CONFLICT(claim_id) DO UPDATE SET
-                salesforce_case_id=excluded.salesforce_case_id,
-                salesforce_case_number=excluded.salesforce_case_number,
-                claimant_name=excluded.claimant_name,
-                age=excluded.age,
-                marital_status=excluded.marital_status,
-                policy_type=excluded.policy_type,
-                incident_type=excluded.incident_type,
-                injury_severity=excluded.injury_severity,
-                state=excluded.state,
-                days_open=excluded.days_open,
-                total_claimed=excluded.total_claimed,
-                insurer_offer=excluded.insurer_offer,
-                settlement_gap_pct=excluded.settlement_gap_pct,
-                policy_tenure_yrs=excluded.policy_tenure_yrs,
-                followup_contacts=excluded.followup_contacts,
-                doc_requests=excluded.doc_requests,
-                disputed_items=excluded.disputed_items,
-                inspections=excluded.inspections,
-                legal_rep=excluded.legal_rep,
-                adjuster_level=excluded.adjuster_level,
-                payment_status=excluded.payment_status,
-                doi_complaint=excluded.doi_complaint,
-                email_transcript=excluded.email_transcript,
-                adjuster_notes=excluded.adjuster_notes,
-                incident_description=excluded.incident_description,
-                activities_json=excluded.activities_json,
-                structured_json=excluded.structured_json,
-                raw_json=excluded.raw_json,
-                updated_at=excluded.updated_at
-            """,
-            row,
-        )
+    _STORE[claim_id] = row
+    _save_json_store()
     return row
 
 
 def get(claim_id: str) -> Optional[Dict[str, Any]]:
     cid = str(claim_id).strip()
-    with _conn() as conn:
-        cur = conn.execute("SELECT * FROM external_claims WHERE claim_id = ?", (cid,))
-        r = cur.fetchone()
-    if not r:
-        return None
-    d = dict(r)
-    for key in ("activities_json", "structured_json", "raw_json"):
-        try:
-            parsed_key = key.replace("_json", "") if key != "raw_json" else "raw"
-            if key == "activities_json":
-                d["activities"] = json.loads(d.pop(key) or "[]")
-            elif key == "structured_json":
-                d["structured"] = json.loads(d.pop(key) or "{}")
-            else:
-                d.pop(key, None)
-        except Exception:
-            if key == "activities_json":
-                d["activities"] = []
-                d.pop(key, None)
-    return d
+    rec = _STORE.get(cid)
+    return _hydrate_record(rec) if rec else None
 
 
 def list_all() -> List[Dict[str, Any]]:
-    with _conn() as conn:
-        rows = conn.execute(
-            "SELECT claim_id FROM external_claims ORDER BY updated_at DESC"
-        ).fetchall()
-    return [get(r["claim_id"]) for r in rows if get(r["claim_id"])]
+    rows = sorted(_STORE.values(), key=lambda r: r.get("updated_at") or "", reverse=True)
+    return [_hydrate_record(r) for r in rows]
 
 
 def _optional_int(val) -> Optional[int]:

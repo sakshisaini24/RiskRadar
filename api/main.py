@@ -24,7 +24,12 @@ from api.similar_claims import find_similar, index_stats as sim_stats
 from api.fairness import compute as compute_fairness
 from api.feedback import FeedbackPayload, record as record_feedback, summary as feedback_summary, for_claim as feedback_for_claim
 from api.drift import compute as compute_drift
-from api.external_claims import combined_text, get as get_external_claim, list_all as list_external_claims
+from api.external_claims import (
+    combined_text,
+    get as get_external_claim,
+    list_all as list_external_claims,
+    reload_from_disk,
+)
 from api.sf_scoring import build_feature_row
 from api.integrations.salesforce import (
     ingest_from_webhook,
@@ -93,6 +98,7 @@ async def health():
 
 @app.on_event("startup")
 async def _startup():
+    reload_from_disk()
     print("[startup] Computing CALIBRATED model validation metrics...")
     try:
         compute_metrics(
@@ -101,6 +107,16 @@ async def _startup():
         )
     except Exception as e:
         print(f"[startup] Metrics computation failed: {e}")
+
+    if os.getenv("SF_SYNC_ON_STARTUP", "").lower() in ("1", "true", "yes"):
+        try:
+            ids, err = pull_open_cases(limit=int(os.getenv("SF_SYNC_LIMIT", "25")))
+            if err:
+                print(f"[startup] SF sync skipped: {err}")
+            else:
+                print(f"[startup] SF sync restored {len(ids)} open case(s)")
+        except Exception as e:
+            print(f"[startup] SF sync failed: {e}")
 
 
 def get_unstructured_for_claim(claim_id):

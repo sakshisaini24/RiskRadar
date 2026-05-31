@@ -12,4 +12,5 @@ frontend/node_modules/
 .ipynb_checkpoints/
 data/feedback.db
 data/external_claims.db
+data/external_claims_store.json
 data/external_claims.db
