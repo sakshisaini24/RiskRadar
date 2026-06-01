@@ -204,9 +204,10 @@ def _queue_row(row_dict: Dict[str, Any], source: str) -> Dict[str, Any]:
     return out
 
 
-def get_legal_context(incident, trigger_phrases=None, top_warnings=None):
-    if incident in LEGAL_CACHE:
-        return LEGAL_CACHE[incident]
+def get_legal_context(incident, trigger_phrases=None, top_warnings=None, claim_id=None):
+    cache_key = f"{incident}|{claim_id or ''}"
+    if cache_key in LEGAL_CACHE:
+        return LEGAL_CACHE[cache_key]
 
     in_cases, in_status = [], "ok"
     try:
@@ -223,7 +224,13 @@ def get_legal_context(incident, trigger_phrases=None, top_warnings=None):
     us_cases, us_status, matched_query = us_law.search_us_precedents_matched(
         incident, trigger_phrases, top_warnings
     )
-    us_spotlight_description = us_law.generate_case_brief(us_cases[0]) if us_cases else None
+    us_spotlight_description = None
+    us_spotlight_relevance = None
+    if us_cases:
+        us_spotlight_description = us_law.generate_case_brief(us_cases[0])
+        us_spotlight_relevance = us_law.explain_claim_relevance(
+            us_cases[0], incident, matched_query
+        )
 
     result = {
         "in_cases": in_cases,
@@ -231,9 +238,10 @@ def get_legal_context(incident, trigger_phrases=None, top_warnings=None):
         "us_cases": us_cases,
         "us_status": us_status,
         "us_spotlight_description": us_spotlight_description,
+        "us_spotlight_relevance": us_spotlight_relevance,
         "matched_query": matched_query,
     }
-    LEGAL_CACHE[incident] = result
+    LEGAL_CACHE[cache_key] = result
     return result
 
 
@@ -455,10 +463,17 @@ async def get_prediction(claim_id: str):
     top_warnings = results.get("top_warning_signs", []) or []
     trigger_phrases = triggers.get("phrases", []) if triggers else []
 
-    legal = get_legal_context(incident, trigger_phrases, top_warnings)
-    all_precedents = legal["in_cases"] + legal["us_cases"]
+    legal = get_legal_context(
+        incident, trigger_phrases, top_warnings, claim_id=claim_id
+    )
+    # US first — drives AI Strategist Legal Impact section order
+    all_precedents = legal["us_cases"] + legal["in_cases"]
 
-    ai_consensus_briefs = ai_factory.generate_all(results, all_precedents)
+    ai_consensus_briefs = ai_factory.generate_all(
+        results,
+        all_precedents,
+        claim_context={"claim_id": claim_id, "incident_type": incident},
+    )
 
     consensus = analyze_consensus(
         ai_consensus_briefs.get("groq_llama"),
@@ -520,6 +535,7 @@ async def get_prediction(claim_id: str):
             "us_search_status": legal["us_status"],
             "india_search_status": legal["in_status"],
             "us_spotlight_description": legal["us_spotlight_description"],
+            "us_spotlight_relevance": legal.get("us_spotlight_relevance"),
             "matched_query": legal.get("matched_query"),
         },
         "ai_consensus": ai_consensus_briefs,

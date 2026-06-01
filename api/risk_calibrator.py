@@ -136,11 +136,18 @@ def calibrate_risk(raw_results, trigger_analysis=None, email_text="", adjuster_t
     structured_calibrated = _isotonic_scale(raw_pct)
     unstructured_pct = _unstructured_score(trigger_analysis, email_text, adjuster_text, raw_pct)
 
+    # Avoid double-counting: when ML already scores very high, cap text-layer lift
+    if structured_calibrated >= 85:
+        unstructured_pct = min(unstructured_pct, structured_calibrated + 12)
+
     final_pct = (
         structured_calibrated * STRUCTURED_WEIGHT
         + unstructured_pct * UNSTRUCTURED_WEIGHT
     )
-    final_pct = round(max(1.0, min(99.0, final_pct)), 2)
+    # Compress top bucket so high-risk claims spread across ~88–97 instead of all 99%
+    if final_pct > 90:
+        final_pct = 90 + (final_pct - 90) * 0.55
+    final_pct = round(max(1.0, min(97.0, final_pct)), 2)
 
     is_high_risk = final_pct >= 60.0  # match frontend's 60% red threshold
 

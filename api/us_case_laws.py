@@ -5,6 +5,12 @@ import requests
 API_ROOT = "https://www.courtlistener.com/api/rest/v4"
 MAX_EXCERPT_CHARS = 1800
 
+HEDGING_WORDS = re.compile(
+    r"\b(likely|probably|may have|might have|possibly|appears to|seems to|"
+    r"it is possible|could be|may be)\b",
+    re.IGNORECASE,
+)
+
 
 class USLawClient:
     """CourtListener v4 client. v3 is restricted for new API tokens."""
@@ -113,6 +119,75 @@ class USLawClient:
         return snippet
 
     @staticmethod
+    def _dehedge(text):
+        if not text:
+            return text
+        cleaned = HEDGING_WORDS.sub("", text)
+        cleaned = re.sub(r"\s{2,}", " ", cleaned)
+        cleaned = re.sub(r"\s+([,.])", r"\1", cleaned)
+        return cleaned.strip()
+
+    @staticmethod
+    def _extractive_summary(excerpt, max_sentences=3):
+        """Quote-first summary when LLM would hedge on thin snippets."""
+        excerpt = re.sub(r"\s+", " ", (excerpt or "").strip())
+        if not excerpt:
+            return ""
+        sentences = re.split(r"(?<=[.!?])\s+", excerpt)
+        picked = [s.strip() for s in sentences if len(s.strip()) > 40][:max_sentences]
+        return " ".join(picked)
+
+    def _build_relevance_note(self, case, incident_type, matched_query):
+        title = case.get("title") or "This case"
+        query = matched_query or incident_type or "insurance claim"
+        snippet = self._strip_html(case.get("snippet") or case.get("headline") or "")
+        topic = snippet[:120] + "..." if len(snippet) > 120 else snippet
+        if topic:
+            return (
+                f"Retrieved for this claim via search \"{query}\" because the opinion text "
+                f"references: {topic}"
+            )
+        return (
+            f"Retrieved for this claim via search \"{query}\" as a US opinion on "
+            f"insurance coverage or claims handling related to {incident_type or 'the incident'}."
+        )
+
+    def explain_claim_relevance(self, case, incident_type, matched_query=None):
+        """How this US case connects to the open claim (for UI + Q&A)."""
+        if not case:
+            return None
+        note = self._build_relevance_note(case, incident_type, matched_query)
+        excerpt = self._fetch_opinion_excerpt(case)
+        if not self.groq_key or len(excerpt) < 120:
+            return note
+
+        try:
+            from groq import Groq
+            client = Groq(api_key=self.groq_key)
+            prompt = (
+                f"An insurance adjuster is handling a {incident_type or 'insurance'} claim.\n"
+                f"Retrieved US case: {case.get('title')}\n"
+                f"Search context: {matched_query or incident_type}\n\n"
+                f"Source excerpt:\n\"\"\"\n{excerpt[:1200]}\n\"\"\"\n\n"
+                f"Write exactly 2 short sentences:\n"
+                f"1. Why this opinion was retrieved for THIS claim type (factual, no hedging).\n"
+                f"2. What specific principle from the excerpt affects claim handling here.\n"
+                f"Do NOT use: likely, probably, may, might. Output only the 2 sentences."
+            )
+            resp = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=150,
+                temperature=0,
+            )
+            text = self._dehedge((resp.choices[0].message.content or "").strip())
+            if text and not HEDGING_WORDS.search(text):
+                return text
+        except Exception as e:
+            print(f"[USLawClient] Relevance explanation failed: {e}")
+        return note
+
+    @staticmethod
     def _excerpt_fallback_summary(case, excerpt):
         """Non-LLM summary when Groq is unavailable or returns unusable text."""
         title = case.get("title") or "This case"
@@ -120,14 +195,11 @@ class USLawClient:
         date_filed = case.get("date_filed") or ""
         meta = ", ".join(p for p in (court, date_filed) if p)
 
-        excerpt = re.sub(r"\s+", " ", (excerpt or "").strip())
-        if excerpt:
-            sentences = re.split(r"(?<=[.!?])\s+", excerpt)
-            core = " ".join(s for s in sentences[:3] if s).strip()
-            core = core[:420].rstrip()
+        core = USLawClient._extractive_summary(excerpt, max_sentences=3)
+        if core:
             if meta:
-                return f"{title} ({meta}) discusses insurance-related issues reflected in the retrieved court record. {core}"
-            return f"{title} discusses insurance-related issues reflected in the retrieved court record. {core}"
+                return f"{title} ({meta}). {core}"
+            return f"{title}. {core}"
 
         if meta:
             return (
@@ -139,16 +211,22 @@ class USLawClient:
             f"insurance coverage and claims disputes."
         )
 
-    def _format_results(self, results, query):
+    def _format_results(self, results, query, incident_type=None):
         """Format raw CourtListener results into our schema. Reusable across search methods."""
         formatted = []
-        for r in results[:3]:
+        seen_titles = set()
+        for r in results:
             title = self._strip_html(r.get("caseName") or "US Insurance Precedent")
+            key = title.lower()
+            if key in seen_titles:
+                continue
+            seen_titles.add(key)
+
             snippet = self._strip_html(r.get("snippet", ""))
             abs_url = r.get("absolute_url") or ""
             cluster_id = r.get("cluster_id")
             opinion_id = r.get("id")
-            formatted.append({
+            case = {
                 "docid": str(opinion_id or cluster_id or ""),
                 "opinion_id": str(opinion_id or ""),
                 "cluster_id": str(cluster_id or ""),
@@ -160,7 +238,13 @@ class USLawClient:
                 "jurisdiction": "US",
                 "url": f"https://www.courtlistener.com{abs_url}" if abs_url else "",
                 "match_query": query,
-            })
+            }
+            case["relevance_note"] = self._build_relevance_note(
+                case, incident_type or "", query
+            )
+            formatted.append(case)
+            if len(formatted) >= 3:
+                break
         return formatted
 
     def search_us_precedents(self, incident_type):
@@ -192,7 +276,7 @@ class USLawClient:
                     print(f"[USLawClient] 0 results for query='{query}', trying next")
                     continue
 
-                formatted = self._format_results(results, query)
+                formatted = self._format_results(results, query, incident_type)
                 print(f"[USLawClient] OK {len(formatted)} results for query='{query}'")
                 return formatted, "ok"
 
@@ -226,7 +310,11 @@ class USLawClient:
         if len(query) > 120:
             query = query[:120]
 
-        return query or "insurance liability"
+        query = query or "insurance liability"
+        # Bias CourtListener toward civil insurance disputes (not criminal fraud-only hits)
+        if "insurance" not in query.lower():
+            query = f"insurance {query}"
+        return query
 
     def search_us_precedents_matched(self, incident_type, trigger_phrases=None, top_warnings=None):
         """
@@ -249,7 +337,9 @@ class USLawClient:
             if response.status_code == 200:
                 results = response.json().get("results", []) or []
                 if results:
-                    formatted = self._format_results(results, matched_query)
+                    formatted = self._format_results(
+                        results, matched_query, incident_type
+                    )
                     if formatted:
                         print(f"[USLawClient] Fact-matched OK ({len(formatted)} results) for '{matched_query}'")
                         return formatted, "ok", matched_query
@@ -297,7 +387,8 @@ class USLawClient:
                 f"- Do NOT invent parties, holdings, damages, or procedural history\n"
                 f"- If the source is only a search snippet without a clear holding, describe "
                 f"the legal question or dispute topic it raises without guessing the outcome\n"
-                f"- Do NOT mention excerpts, limitations, or uncertainty\n"
+                f"- Do NOT use: likely, probably, may have, might, possibly, appears to\n"
+                f"- If the excerpt is thin, state only the legal issue visible in the text\n"
                 f"- Output ONLY the 2-3 sentence summary"
             )
             resp = client.chat.completions.create(
@@ -306,7 +397,7 @@ class USLawClient:
                 max_tokens=220,
                 temperature=0,
             )
-            text = (resp.choices[0].message.content or "").strip()
+            text = self._dehedge((resp.choices[0].message.content or "").strip())
 
             refusal_signals = [
                 "couldn't find", "could not find", "don't have information",
@@ -314,8 +405,11 @@ class USLawClient:
                 "i don't know", "no information available", "cannot determine",
                 "outside knowledge", "based on the excerpt",
             ]
-            if not text or any(sig in text.lower() for sig in refusal_signals):
-                return self._excerpt_fallback_summary(case, excerpt)
+            if not text or HEDGING_WORDS.search(text) or any(
+                sig in text.lower() for sig in refusal_signals
+            ):
+                fallback = self._excerpt_fallback_summary(case, excerpt)
+                return fallback if fallback else text
             return text
         except Exception as e:
             print(f"[USLawClient] Brief generation failed: {e}")

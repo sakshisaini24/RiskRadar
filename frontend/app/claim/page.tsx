@@ -151,6 +151,7 @@ interface RiskData {
     us_search_status?: "ok" | "no_key" | "error" | "empty";
     india_search_status?: "ok" | "error" | "empty";
     us_spotlight_description?: string | null;
+    us_spotlight_relevance?: string | null;
     matched_query?: string | null;
   };
   ai_consensus: {
@@ -991,6 +992,16 @@ function RiskDashboard() {
                       >
                         {usSpotlight.title} ↗
                       </a>
+                      {data.legal_context.us_spotlight_relevance && (
+                        <div className="mb-3 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                          <div className="text-[9px] font-black uppercase text-blue-600 tracking-widest mb-1">
+                            Relevance to this claim
+                          </div>
+                          <p className="text-xs text-blue-900 leading-relaxed">
+                            {data.legal_context.us_spotlight_relevance}
+                          </p>
+                        </div>
+                      )}
                       {data.legal_context.us_spotlight_description ? (
                         <p className="text-sm text-slate-600 leading-relaxed">
                           {data.legal_context.us_spotlight_description}

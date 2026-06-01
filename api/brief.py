@@ -25,26 +25,58 @@ def _clean_title(t):
     return re.sub(r"\s+", " ", str(t)).strip()
 
 
+def order_precedents_for_brief(cases):
+    """US precedents first so Legal Impact leads with primary US authority."""
+    if not cases:
+        return []
+    us = [c for c in cases if str(c.get("jurisdiction", "")).upper() == "US"]
+    india = [c for c in cases if str(c.get("jurisdiction", "")).lower() == "india"]
+    other = [c for c in cases if c not in us and c not in india]
+    ordered = us[:3] + india[:3] + other
+    return ordered[:MAX_CASES_IN_PROMPT]
+
+
 def _format_case_block(cases):
-    """Compact, citation-ready list of retrieved precedents."""
-    lines = []
-    for i, c in enumerate(cases[:MAX_CASES_IN_PROMPT], 1):
-        title = _clean_title(c.get("title") or c.get("name") or f"Case {i}")
-        jur = c.get("jurisdiction", "Unknown")
-        headline = _clean_title(c.get("headline") or c.get("snippet") or "")
-        if headline and len(headline) > MAX_HEADLINE_CHARS:
-            headline = headline[:MAX_HEADLINE_CHARS].rstrip() + "..."
-        line = f"  [{i}] {title}  ({jur})"
-        if headline:
-            line += f"\n      Excerpt: {headline}"
-        lines.append(line)
-    if not lines:
+    """Compact, citation-ready list — US block before India."""
+    ordered = order_precedents_for_brief(cases)
+    if not ordered:
         return "  (no precedents retrieved — do NOT invent any)"
+
+    us = [c for c in ordered if str(c.get("jurisdiction", "")).upper() == "US"]
+    india = [c for c in ordered if str(c.get("jurisdiction", "")).lower() == "india"]
+    lines = []
+
+    def _append_group(label, group, start_idx):
+        if not group:
+            return start_idx
+        lines.append(f"  {label}")
+        idx = start_idx
+        for c in group:
+            title = _clean_title(c.get("title") or c.get("name") or f"Case {idx}")
+            headline = _clean_title(c.get("headline") or c.get("snippet") or "")
+            if headline and len(headline) > MAX_HEADLINE_CHARS:
+                headline = headline[:MAX_HEADLINE_CHARS].rstrip() + "..."
+            line = f"  [{idx}] {title}  (US)" if label.startswith("PRIMARY") else f"  [{idx}] {title}  (India)"
+            if headline:
+                line += f"\n      Excerpt: {headline}"
+            rel = c.get("relevance_note")
+            if rel:
+                line += f"\n      Why retrieved: {rel}"
+            lines.append(line)
+            idx += 1
+        return idx
+
+    n = 1
+    n = _append_group("PRIMARY US PRECEDENTS (cite first in Legal Impact):", us, n)
+    _append_group("SECONDARY INDIA PRECEDENTS (cite second):", india, n)
     return "\n".join(lines)
 
 
 def _allowed_titles(cases):
-    return [_clean_title(c.get("title") or c.get("name") or "") for c in cases[:MAX_CASES_IN_PROMPT]]
+    return [
+        _clean_title(c.get("title") or c.get("name") or "")
+        for c in order_precedents_for_brief(cases)
+    ]
 
 
 def validate_citations(text, allowed_titles):
@@ -94,25 +126,51 @@ class BriefGenerator:
         groq_key = os.getenv("GROQ_API_KEY")
         self.groq_client = Groq(api_key=groq_key) if groq_key else None
 
-    def _build_prompt(self, data, judgements):
+    def _build_prompt(self, data, judgements, claim_context=None):
         risk = round(float(data.get("risk_score_pct", 0)), 1)
         flags = data.get("top_warning_signs", []) or []
-        cases = judgements or []
-        allowed = _allowed_titles(cases)
-        case_block = _format_case_block(cases)
+        ordered = order_precedents_for_brief(judgements or [])
+        allowed = _allowed_titles(ordered)
+        case_block = _format_case_block(judgements or [])
 
-        has_india = any(c.get("jurisdiction") == "India" for c in cases)
-        has_us = any(c.get("jurisdiction") == "US" for c in cases)
+        ctx = claim_context or {}
+        incident = ctx.get("incident_type") or "insurance claim"
+        claim_id = ctx.get("claim_id") or ""
+
+        has_india = any(str(c.get("jurisdiction", "")).lower() == "india" for c in ordered)
+        has_us = any(str(c.get("jurisdiction", "")).upper() == "US" for c in ordered)
         if has_india and has_us:
-            persona = "Global Insurance Claims Strategist"
+            persona = "Global Insurance Claims Strategist (US primary, India secondary)"
         elif has_us:
             persona = "US Insurance Claims Strategist"
         else:
             persona = "Expert Insurance Claims Strategist (India)"
 
+        legal_impact_rules = (
+            "2. **Legal Impact** — use this exact structure:\n"
+            "   **US precedent:** One sentence with [Case: <exact US title>] stating how that decision "
+            "applies to this claim's facts (coverage, bad faith, notice, or liability).\n"
+            "   **India precedent:** One sentence with [Case: <exact India title>] stating the parallel "
+            "duty, notice, or liability principle for this claim.\n"
+            "   If no US precedent is listed, omit the US line. If no India precedent is listed, omit the India line.\n"
+            "   Always cite US before India when both exist."
+        )
+        if has_us and not has_india:
+            legal_impact_rules = (
+                "2. **Legal Impact** — one or two sentences citing [Case: <exact US title>] and explaining "
+                "how the decision applies to this claim."
+            )
+        elif has_india and not has_us:
+            legal_impact_rules = (
+                "2. **Legal Impact** — one or two sentences citing [Case: <exact India title>] and explaining "
+                "how the decision applies to this claim."
+            )
+
         return f"""ROLE: {persona}
 
 CLAIM SNAPSHOT:
+  Claim ID: {claim_id}
+  Incident type: {incident}
   Escalation risk score: {risk}%
   Top risk signals: {flags}
 
@@ -120,21 +178,21 @@ RETRIEVED PRECEDENTS (the only precedents you may cite):
 {case_block}
 
 STRICT CITATION RULES (follow exactly):
-  1. If you reference a precedent, use the format [Case: <exact title as shown above>].
-  2. Do NOT invent, paraphrase, or introduce any case not in the RETRIEVED PRECEDENTS list above.
-  3. If no retrieved precedents apply, say so plainly — do NOT fabricate one.
-  4. Stay within {len(allowed) if allowed else 0} cases. Prefer the single strongest match.
+  1. Use [Case: <exact title as shown above>] for every precedent reference.
+  2. Do NOT invent cases. Do NOT use outside knowledge of cases not listed above.
+  3. Do NOT use hedging words: likely, probably, may have, might, possibly, appears to.
+  4. Write as if summarizing retrieved excerpts — state principles directly.
 
-TASK: Write a ~120 word consensus brief for the adjuster, structured as:
-  1. **Risk Summary** — justify the {risk}% score using the risk signals.
-  2. **Legal Impact** — cite at most two retrieved precedents in [Case: ...] form and explain how they shape liability on this claim.
-  3. **Recommended Next Step** — one concrete action the adjuster should take today.
+TASK: Write ~140 words for the adjuster:
+  1. **Risk Summary** — justify the {risk}% score using the risk signals (2 sentences max).
+{legal_impact_rules}
+  3. **Recommended Next Step** — one concrete action for today.
 
-Tone: professional, decisive, specific. No hedging phrases like 'it depends'.
+Tone: professional, decisive, specific.
 """
 
-    def generate_all(self, data, judgements):
-        prompt = self._build_prompt(data, judgements)
+    def generate_all(self, data, judgements, claim_context=None):
+        prompt = self._build_prompt(data, judgements, claim_context=claim_context)
         allowed = _allowed_titles(judgements or [])
         responses = {}
 
@@ -146,7 +204,7 @@ Tone: professional, decisive, specific. No hedging phrases like 'it depends'.
                     generation_config=genai.types.GenerationConfig(
                         temperature=0.0,
                         top_p=1.0,
-                        max_output_tokens=400,
+                        max_output_tokens=500,
                     ),
                 )
                 text = (res.text or "").strip()
@@ -173,7 +231,7 @@ Tone: professional, decisive, specific. No hedging phrases like 'it depends'.
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.0,
                     top_p=1.0,
-                    max_tokens=400,
+                    max_tokens=500,
                 )
                 text = res.choices[0].message.content.strip()
                 cited, unsupported = validate_citations(text, allowed)
