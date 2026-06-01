@@ -451,6 +451,9 @@ function RiskDashboard() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const body = await res.json();
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("riskradar_feedback_updated", String(Date.now()));
+      }
       setFeedbackState({
         submitting: false,
         last: verdict,

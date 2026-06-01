@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+
+/** Structured-only holdout floor (see eval report) — conservative planning recall */
+const CONSERVATIVE_RECALL = 0.77;
 
 /** Same origin in Docker/Render; localhost:8000 for local dev. */
 function resolveApiBase(): string {
@@ -181,6 +184,9 @@ export default function ClaimsQueue() {
   const [avgClaimValue, setAvgClaimValue] = useState<number>(289000);
   const [escalationMultiplier, setEscalationMultiplier] = useState<number>(3.5);
   const [monthlyVolume, setMonthlyVolume] = useState<number>(500);
+  const [minutesSavedPerClaim, setMinutesSavedPerClaim] = useState<number>(37);
+  const [adjusterHourlyRate, setAdjusterHourlyRate] = useState<number>(55);
+  const [planningMode, setPlanningMode] = useState<boolean>(true);
   const [activePlot, setActivePlot] = useState<PlotName>("calibration_curve");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -188,56 +194,96 @@ export default function ClaimsQueue() {
   const [policyFilter, setPolicyFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [claimsRes, metricsRes, evalRes, scoresRes, fairRes, feedbackRes, driftRes] =
-          await Promise.all([
-            fetch(`${API_BASE}/claims`),
-            fetch(`${API_BASE}/metrics`),
-            fetch(`${API_BASE}/evaluation/report`),
-            fetch(`${API_BASE}/metrics/holdout_scores`),
-            fetch(`${API_BASE}/fairness?threshold=50`),
-            fetch(`${API_BASE}/feedback/summary`),
-            fetch(`${API_BASE}/drift`),
-          ]);
-        if (!claimsRes.ok) throw new Error("Failed to load claims queue");
-        const claimsData: QueueData = await claimsRes.json();
-        const metricsData: Metrics = await metricsRes.json();
-        const evalData: EvalReport = evalRes.ok
-          ? await evalRes.json()
-          : { status: "missing" };
-        const scoresData: HoldoutScores = scoresRes.ok
-          ? await scoresRes.json()
-          : { n: 0, claim_ids: [], y_true: [], y_pred_proba: [] };
-        const fairData: FairnessReport = fairRes.ok
-          ? await fairRes.json()
-          : { status: "unavailable" };
-        const fbData = feedbackRes.ok ? await feedbackRes.json() : null;
-        const driftData: DriftReport = driftRes.ok
-          ? await driftRes.json()
-          : { status: "unavailable" };
-        setData(claimsData);
-        setMetrics(metricsData);
-        setEvalReport(evalData);
-        setScores(scoresData);
-        setFairness(fairData);
-        setFeedbackStats(fbData);
-        setDrift(driftData);
-        if (metricsData.threshold) setSliderThreshold(metricsData.threshold);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+  const fetchFeedbackSummary = useCallback(async () => {
+    try {
+      const feedbackRes = await fetch(`${API_BASE}/feedback/summary`);
+      if (feedbackRes.ok) {
+        setFeedbackStats(await feedbackRes.json());
       }
-    })();
+    } catch {
+      /* non-fatal */
+    }
   }, []);
 
-  // Derived ROI: escalations caught per month vs a random-flagging baseline.
+  const loadDashboard = useCallback(async () => {
+    try {
+      const [claimsRes, metricsRes, evalRes, scoresRes, fairRes, feedbackRes, driftRes] =
+        await Promise.all([
+          fetch(`${API_BASE}/claims`),
+          fetch(`${API_BASE}/metrics`),
+          fetch(`${API_BASE}/evaluation/report`),
+          fetch(`${API_BASE}/metrics/holdout_scores`),
+          fetch(`${API_BASE}/fairness?threshold=50`),
+          fetch(`${API_BASE}/feedback/summary`),
+          fetch(`${API_BASE}/drift`),
+        ]);
+      if (!claimsRes.ok) throw new Error("Failed to load claims queue");
+      const claimsData: QueueData = await claimsRes.json();
+      const metricsData: Metrics = await metricsRes.json();
+      const evalData: EvalReport = evalRes.ok
+        ? await evalRes.json()
+        : { status: "missing" };
+      const scoresData: HoldoutScores = scoresRes.ok
+        ? await scoresRes.json()
+        : { n: 0, claim_ids: [], y_true: [], y_pred_proba: [] };
+      const fairData: FairnessReport = fairRes.ok
+        ? await fairRes.json()
+        : { status: "unavailable" };
+      const fbData = feedbackRes.ok ? await feedbackRes.json() : null;
+      const driftData: DriftReport = driftRes.ok
+        ? await driftRes.json()
+        : { status: "unavailable" };
+      setData(claimsData);
+      setMetrics(metricsData);
+      setEvalReport(evalData);
+      setScores(scoresData);
+      setFairness(fairData);
+      setFeedbackStats(fbData);
+      setDrift(driftData);
+      if (metricsData.threshold) setSliderThreshold(metricsData.threshold);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  // Refresh adjuster agreement after voting on a claim or returning to this tab
+  useEffect(() => {
+    const refreshIfNeeded = () => {
+      if (typeof window === "undefined") return;
+      if (sessionStorage.getItem("riskradar_feedback_updated")) {
+        sessionStorage.removeItem("riskradar_feedback_updated");
+        fetchFeedbackSummary();
+      }
+    };
+    refreshIfNeeded();
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        refreshIfNeeded();
+        fetchFeedbackSummary();
+      }
+    };
+    const onFocus = () => fetchFeedbackSummary();
+
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [fetchFeedbackSummary]);
+
+  // Derived ROI: escalations caught per month vs baseline + adjuster labor hours
   const roi = useMemo(() => {
     if (!scores || scores.n === 0) return null;
     const positiveRate = metrics?.baseline_random_recall ?? 0.35;
-    const recall = (() => {
+    const holdoutRecall = (() => {
       let tp = 0, fn = 0;
       for (let i = 0; i < scores.n; i++) {
         const pred = scores.y_pred_proba[i] >= sliderThreshold ? 1 : 0;
@@ -248,14 +294,20 @@ export default function ClaimsQueue() {
       }
       return tp + fn > 0 ? tp / (tp + fn) : 0;
     })();
+    const effectiveRecall = planningMode ? CONSERVATIVE_RECALL : holdoutRecall;
     const escalationsPerMonth = monthlyVolume * positiveRate;
-    const caughtByModel = escalationsPerMonth * recall;
-    const caughtByBaseline = escalationsPerMonth * positiveRate; // random flagging
+    const caughtByModel = escalationsPerMonth * effectiveRecall;
+    const caughtByBaseline = escalationsPerMonth * positiveRate;
     const earlyDetections = Math.max(0, caughtByModel - caughtByBaseline);
     const costPerMiss = avgClaimValue * (escalationMultiplier - 1);
     const monthlySavings = earlyDetections * costPerMiss;
+    const deepReviewPerMonth = escalationsPerMonth;
+    const hoursSavedMonthly = (deepReviewPerMonth * minutesSavedPerClaim) / 60;
+    const monthlyLaborSavings = hoursSavedMonthly * adjusterHourlyRate;
     return {
-      recall,
+      holdoutRecall,
+      effectiveRecall,
+      recall: effectiveRecall,
       escalationsPerMonth,
       caughtByModel,
       caughtByBaseline,
@@ -263,8 +315,22 @@ export default function ClaimsQueue() {
       monthlySavings,
       annualSavings: monthlySavings * 12,
       costPerMiss,
+      deepReviewPerMonth,
+      hoursSavedMonthly,
+      monthlyLaborSavings,
+      annualLaborSavings: monthlyLaborSavings * 12,
     };
-  }, [scores, sliderThreshold, avgClaimValue, escalationMultiplier, monthlyVolume, metrics]);
+  }, [
+    scores,
+    sliderThreshold,
+    avgClaimValue,
+    escalationMultiplier,
+    monthlyVolume,
+    metrics,
+    planningMode,
+    minutesSavedPerClaim,
+    adjusterHourlyRate,
+  ]);
 
   // Live confusion matrix recomputed whenever the slider moves.
   const liveCM = useMemo(() => {
@@ -474,17 +540,32 @@ export default function ClaimsQueue() {
                 <div>
                   <h3 className="text-xl font-bold">Business Impact · ROI Calculator</h3>
                   <p className="text-xs text-emerald-200 mt-0.5">
-                    Translates today's threshold ({sliderThreshold.toFixed(0)}%) and model
-                    recall into monthly savings. Adjust assumptions to match your book.
+                    Escalation-loss avoidance ($) plus adjuster hours returned (45→8 min
+                    workflow). Toggle planning mode for conservative 77% recall.
                   </p>
                 </div>
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border bg-emerald-800/60 text-emerald-200 border-emerald-700">
-                Live · threshold-linked
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setPlanningMode((p) => !p)}
+                  className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border transition-all ${
+                    planningMode
+                      ? "bg-amber-400/20 text-amber-100 border-amber-300"
+                      : "bg-emerald-800/60 text-emerald-200 border-emerald-700"
+                  }`}
+                >
+                  {planningMode
+                    ? "Planning mode · 77% recall"
+                    : "Live holdout recall"}
+                </button>
+                <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border bg-emerald-800/60 text-emerald-200 border-emerald-700">
+                  Threshold {sliderThreshold.toFixed(0)}%
+                </span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
               <ROIInput
                 label="Claims / month"
                 value={monthlyVolume}
@@ -509,14 +590,54 @@ export default function ClaimsQueue() {
                 step={0.1}
                 format={(v) => `${v.toFixed(1)}×`}
               />
+              <ROIInput
+                label="Minutes saved / claim"
+                value={minutesSavedPerClaim}
+                onChange={setMinutesSavedPerClaim}
+                min={5}
+                step={1}
+                format={(v) => `${v} min`}
+              />
+              <ROIInput
+                label="Adjuster $ / hour"
+                value={adjusterHourlyRate}
+                onChange={setAdjusterHourlyRate}
+                min={25}
+                step={5}
+                format={(v) => `$${v}`}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="bg-emerald-800/40 rounded-2xl p-4 border border-emerald-700">
                 <div className="text-[10px] font-black uppercase tracking-widest text-emerald-300">
-                  Current recall
+                  Recall used in ROI
                 </div>
                 <div className="text-2xl font-black text-white mt-1">
-                  {(roi.recall * 100).toFixed(0)}%
+                  {(roi.effectiveRecall * 100).toFixed(0)}%
                 </div>
-                <div className="text-[10px] text-emerald-300 mt-1">at slider threshold</div>
+                <div className="text-[10px] text-emerald-300 mt-1">
+                  {planningMode
+                    ? `Conservative floor (holdout live: ${(roi.holdoutRecall * 100).toFixed(0)}%)`
+                    : `Holdout at ${sliderThreshold.toFixed(0)}% threshold`}
+                </div>
+              </div>
+              <div className="bg-emerald-800/40 rounded-2xl p-4 border border-emerald-700 md:col-span-2">
+                <div className="text-[10px] font-black uppercase tracking-widest text-emerald-300 mb-1">
+                  Adjuster time returned
+                </div>
+                <div className="flex flex-wrap items-baseline gap-4">
+                  <div className="text-2xl font-black text-white">
+                    {roi.hoursSavedMonthly.toFixed(0)} hrs/mo
+                  </div>
+                  <div className="text-sm text-emerald-200">
+                    {roi.deepReviewPerMonth.toFixed(0)} deep reviews × {minutesSavedPerClaim} min
+                    saved (45→8 min workflow)
+                  </div>
+                  <div className="text-lg font-black text-amber-200">
+                    ≈ ${Math.round(roi.monthlyLaborSavings / 1000).toLocaleString()}k/mo labor
+                  </div>
+                </div>
               </div>
             </div>
 
