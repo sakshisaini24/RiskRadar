@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import threading
 from typing import Any, Dict, Optional
 
 import pandas as pd
@@ -37,6 +38,7 @@ from api.integrations.salesforce import (
     pull_open_cases,
     verify_webhook_secret,
 )
+from api.queue_scores import build_queue_score_cache
 
 load_dotenv()
 
@@ -57,6 +59,8 @@ ai_factory = BriefGenerator()
 
 LEGAL_CACHE = {}
 PREDICT_CACHE = {}
+QUEUE_SCORE_CACHE: Dict[str, Dict[str, Any]] = {}
+UNSTRUCTURED_BY_ID: Dict[str, Dict[str, str]] = {}
 
 
 try:
@@ -97,17 +101,58 @@ async def health():
     }
 
 
-@app.on_event("startup")
-async def _startup():
-    reload_from_disk()
-    print("[startup] Computing CALIBRATED model validation metrics...")
+def _index_unstructured():
+    global UNSTRUCTURED_BY_ID
+    UNSTRUCTURED_BY_ID = {}
+    if UNSTRUCTURED_DATA.empty:
+        return
+    for _, row in UNSTRUCTURED_DATA.iterrows():
+        cid = str(row.get("Claim ID", "")).strip()
+        if not cid:
+            continue
+        UNSTRUCTURED_BY_ID[cid] = {
+            "email_text": str(
+                row.get("Email Transcript — Claimant (Unstructured)", "") or ""
+            ),
+            "adjuster_text": str(row.get("Adjuster Field Notes (Unstructured)", "") or ""),
+        }
+
+
+def _warm_queue_cache():
+    global QUEUE_SCORE_CACHE
+    if QUEUE_SCORE_CACHE:
+        return
+    _index_unstructured()
+    print("[startup] Building queue score cache (batch)...")
+    QUEUE_SCORE_CACHE.update(
+        build_queue_score_cache(
+            ensemble,
+            genai_df=GENAI_DATA,
+            unstructured_by_id=UNSTRUCTURED_BY_ID,
+        )
+    )
+    print(f"[startup] Queue cache ready: {len(QUEUE_SCORE_CACHE)} claims")
+
+
+def _compute_metrics_background():
+    print("[startup] Computing holdout metrics (background)...")
     try:
         compute_metrics(
-            ensemble, STRUCTURED_DATA, threshold=50.0,
-            unstructured_df=UNSTRUCTURED_DATA, genai_df=GENAI_DATA,
+            ensemble,
+            STRUCTURED_DATA,
+            threshold=50.0,
+            unstructured_df=UNSTRUCTURED_DATA,
+            genai_df=GENAI_DATA,
         )
     except Exception as e:
         print(f"[startup] Metrics computation failed: {e}")
+
+
+@app.on_event("startup")
+async def _startup():
+    reload_from_disk()
+    _warm_queue_cache()
+    threading.Thread(target=_compute_metrics_background, daemon=True).start()
 
     if os.getenv("SF_SYNC_ON_STARTUP", "").lower() in ("1", "true", "yes"):
         try:
@@ -174,17 +219,36 @@ def _score_claim(cid: str, email_text: str = "", adjuster_text: str = "", genai_
 
 
 def _queue_row(row_dict: Dict[str, Any], source: str) -> Dict[str, Any]:
-    cid = row_dict["claim_id"]
+    cid = str(row_dict["claim_id"]).strip()
     email_text = row_dict.get("email_text", "")
     adjuster_text = row_dict.get("adjuster_text", "")
     risk, is_high = 0.0, False
-    try:
-        _, _, calibrated = _score_claim(cid, email_text, adjuster_text, genai_df=GENAI_DATA)
-        if calibrated:
-            risk = float(calibrated.get("risk_score_pct", 0))
-            is_high = bool(calibrated.get("is_high_risk", False))
-    except Exception as e:
-        print(f"[claims] Error for {cid}: {e}")
+
+    cached = QUEUE_SCORE_CACHE.get(cid)
+    if cached:
+        risk = float(cached.get("risk_score_pct", 0))
+        is_high = bool(cached.get("is_high_risk", False))
+    else:
+        try:
+            if not QUEUE_SCORE_CACHE:
+                _warm_queue_cache()
+                cached = QUEUE_SCORE_CACHE.get(cid)
+            if cached:
+                risk = float(cached.get("risk_score_pct", 0))
+                is_high = bool(cached.get("is_high_risk", False))
+            else:
+                _, _, calibrated = _score_claim(
+                    cid, email_text, adjuster_text, genai_df=GENAI_DATA
+                )
+                if calibrated:
+                    risk = float(calibrated.get("risk_score_pct", 0))
+                    is_high = bool(calibrated.get("is_high_risk", False))
+                    QUEUE_SCORE_CACHE[cid] = {
+                        "risk_score_pct": risk,
+                        "is_high_risk": is_high,
+                    }
+        except Exception as e:
+            print(f"[claims] Error for {cid}: {e}")
 
     out = {
         "claim_id": cid,
@@ -336,7 +400,9 @@ async def salesforce_webhook(
         raise HTTPException(status_code=400, detail="JSON body required")
     try:
         result = ingest_from_webhook(body)
-        PREDICT_CACHE.pop(result["claim_id"], None)
+        cid = result["claim_id"]
+        PREDICT_CACHE.pop(cid, None)
+        QUEUE_SCORE_CACHE.pop(cid, None)
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -350,6 +416,7 @@ async def salesforce_sync(limit: int = 20):
         raise HTTPException(status_code=503, detail=err)
     for cid in ids:
         PREDICT_CACHE.pop(cid, None)
+        QUEUE_SCORE_CACHE.pop(cid, None)
     return {"status": "ok", "ingested": len(ids), "claim_ids": ids}
 
 
@@ -374,6 +441,9 @@ async def salesforce_status():
 @app.get("/claims")
 async def claims_list():
     """Dataset claims + Salesforce-ingested claims."""
+    if not QUEUE_SCORE_CACHE:
+        _warm_queue_cache()
+
     claims = []
     seen = set()
 
@@ -381,12 +451,9 @@ async def claims_list():
         for _, row in STRUCTURED_DATA.iterrows():
             cid = str(row.get("claim_id"))
             seen.add(cid)
-            email_text, adjuster_text = "", ""
-            if not UNSTRUCTURED_DATA.empty:
-                u = UNSTRUCTURED_DATA[UNSTRUCTURED_DATA["Claim ID"] == cid]
-                if not u.empty:
-                    email_text = str(u.iloc[0].get("Email Transcript — Claimant (Unstructured)", "") or "")
-                    adjuster_text = str(u.iloc[0].get("Adjuster Field Notes (Unstructured)", "") or "")
+            u = UNSTRUCTURED_BY_ID.get(cid, {})
+            email_text = u.get("email_text", "")
+            adjuster_text = u.get("adjuster_text", "")
             claims.append(_queue_row({
                 "claim_id": cid,
                 "claimant_name": str(row.get("claimant_name", "") or ""),
@@ -554,7 +621,9 @@ async def get_prediction(claim_id: str):
 async def clear_cache():
     LEGAL_CACHE.clear()
     PREDICT_CACHE.clear()
-    return {"status": "cleared"}
+    QUEUE_SCORE_CACHE.clear()
+    _warm_queue_cache()
+    return {"status": "cleared", "queue_cached": len(QUEUE_SCORE_CACHE)}
 
 
 if __name__ == "__main__":

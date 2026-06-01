@@ -189,6 +189,7 @@ export default function ClaimsQueue() {
   const [planningMode, setPlanningMode] = useState<boolean>(true);
   const [activePlot, setActivePlot] = useState<PlotName>("calibration_curve");
   const [loading, setLoading] = useState(true);
+  const [loadingOps, setLoadingOps] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [riskFilter, setRiskFilter] = useState<RiskFilter>("all");
   const [policyFilter, setPolicyFilter] = useState<string>("all");
@@ -205,11 +206,11 @@ export default function ClaimsQueue() {
     }
   }, []);
 
-  const loadDashboard = useCallback(async () => {
+  const loadOpsPanels = useCallback(async () => {
+    setLoadingOps(true);
     try {
-      const [claimsRes, metricsRes, evalRes, scoresRes, fairRes, feedbackRes, driftRes] =
+      const [metricsRes, evalRes, scoresRes, fairRes, feedbackRes, driftRes] =
         await Promise.all([
-          fetch(`${API_BASE}/claims`),
           fetch(`${API_BASE}/metrics`),
           fetch(`${API_BASE}/evaluation/report`),
           fetch(`${API_BASE}/metrics/holdout_scores`),
@@ -217,9 +218,9 @@ export default function ClaimsQueue() {
           fetch(`${API_BASE}/feedback/summary`),
           fetch(`${API_BASE}/drift`),
         ]);
-      if (!claimsRes.ok) throw new Error("Failed to load claims queue");
-      const claimsData: QueueData = await claimsRes.json();
-      const metricsData: Metrics = await metricsRes.json();
+      const metricsData: Metrics = metricsRes.ok
+        ? await metricsRes.json()
+        : { status: "unavailable", total_evaluated: 0, threshold: 50, confusion_matrix: { tp: 0, fp: 0, tn: 0, fn: 0 }, precision: 0, recall: 0, f1: 0, accuracy: 0, baseline_random_recall: 0.35, notes: "" };
       const evalData: EvalReport = evalRes.ok
         ? await evalRes.json()
         : { status: "missing" };
@@ -233,7 +234,6 @@ export default function ClaimsQueue() {
       const driftData: DriftReport = driftRes.ok
         ? await driftRes.json()
         : { status: "unavailable" };
-      setData(claimsData);
       setMetrics(metricsData);
       setEvalReport(evalData);
       setScores(scoresData);
@@ -241,12 +241,29 @@ export default function ClaimsQueue() {
       setFeedbackStats(fbData);
       setDrift(driftData);
       if (metricsData.threshold) setSliderThreshold(metricsData.threshold);
+    } catch {
+      /* ops panels are non-blocking */
+    } finally {
+      setLoadingOps(false);
+    }
+  }, []);
+
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const claimsRes = await fetch(`${API_BASE}/claims`);
+      if (!claimsRes.ok) throw new Error("Failed to load claims queue");
+      const claimsData: QueueData = await claimsRes.json();
+      setData(claimsData);
+      fetchFeedbackSummary();
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+    loadOpsPanels();
+  }, [fetchFeedbackSummary, loadOpsPanels]);
 
   useEffect(() => {
     loadDashboard();
@@ -529,6 +546,12 @@ export default function ClaimsQueue() {
                 </p>
               )}
             </div>
+          </div>
+        )}
+
+        {loadingOps && !roi && (
+          <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 text-center text-sm text-slate-500 italic">
+            Loading ROI calculator and model metrics…
           </div>
         )}
 
