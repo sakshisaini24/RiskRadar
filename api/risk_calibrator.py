@@ -12,8 +12,9 @@ import joblib
 
 # Tunable parameters
 TEMPERATURE = 1.6            # fallback only — used if calibrator.joblib missing
-STRUCTURED_WEIGHT = 0.70
-UNSTRUCTURED_WEIGHT = 0.30
+STRUCTURED_WEIGHT = 0.64     # isotonic-calibrated ML
+UNSTRUCTURED_WEIGHT = 0.28   # trigger / tone signals
+RAW_ML_WEIGHT = 0.08         # keeps per-claim spread among top-tier scores
 
 CALIBRATOR_PATH = "models/calibrator.joblib"
 _CALIBRATOR = None
@@ -136,18 +137,23 @@ def calibrate_risk(raw_results, trigger_analysis=None, email_text="", adjuster_t
     structured_calibrated = _isotonic_scale(raw_pct)
     unstructured_pct = _unstructured_score(trigger_analysis, email_text, adjuster_text, raw_pct)
 
-    # Avoid double-counting: when ML already scores very high, cap text-layer lift
+    # When ML is already high, limit text-layer lift but vary by trigger severity/count
     if structured_calibrated >= 85:
-        unstructured_pct = min(unstructured_pct, structured_calibrated + 12)
+        trigger_lift = 0.0
+        if trigger_analysis:
+            trigger_lift = min(
+                14.0,
+                float(trigger_analysis.get("risk_weight", 0)) * 1.25
+                + len(trigger_analysis.get("phrases", [])) * 1.5,
+            )
+        unstructured_pct = min(unstructured_pct, structured_calibrated + trigger_lift)
 
     final_pct = (
         structured_calibrated * STRUCTURED_WEIGHT
         + unstructured_pct * UNSTRUCTURED_WEIGHT
+        + raw_pct * RAW_ML_WEIGHT
     )
-    # Compress top bucket so high-risk claims spread across ~88–97 instead of all 99%
-    if final_pct > 90:
-        final_pct = 90 + (final_pct - 90) * 0.55
-    final_pct = round(max(1.0, min(97.0, final_pct)), 2)
+    final_pct = round(max(1.0, min(98.5, final_pct)), 2)
 
     is_high_risk = final_pct >= 60.0  # match frontend's 60% red threshold
 
@@ -163,6 +169,7 @@ def calibrate_risk(raw_results, trigger_analysis=None, email_text="", adjuster_t
             "weights": {
                 "structured": STRUCTURED_WEIGHT,
                 "unstructured": UNSTRUCTURED_WEIGHT,
+                "raw_ml": RAW_ML_WEIGHT,
             },
             "final": final_pct,
         },
