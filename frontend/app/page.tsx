@@ -77,7 +77,23 @@ interface EvalReport {
 }
 
 type RiskFilter = "all" | "high" | "medium" | "low";
+type RiskTier = "low" | "medium" | "high";
 type PlotName = "calibration_curve" | "pr_curve" | "lift_chart" | "confusion_matrices";
+
+/** Must match claim page tiers and backend is_high_risk (60%). */
+const RISK_TIER_LOW_MAX = 10;
+const RISK_TIER_HIGH_MIN = 60;
+
+function getRiskTier(pct: number): RiskTier {
+  if (pct < RISK_TIER_LOW_MAX) return "low";
+  if (pct < RISK_TIER_HIGH_MIN) return "medium";
+  return "high";
+}
+
+function matchesRiskFilter(pct: number, filter: RiskFilter): boolean {
+  if (filter === "all") return true;
+  return getRiskTier(pct) === filter;
+}
 
 const PLOT_LABELS: Record<PlotName, string> = {
   calibration_curve: "Calibration",
@@ -376,9 +392,7 @@ export default function ClaimsQueue() {
   const filteredClaims = useMemo(() => {
     if (!data) return [];
     return data.claims.filter((c) => {
-      if (riskFilter === "high" && c.risk_score_pct < 70) return false;
-      if (riskFilter === "medium" && (c.risk_score_pct < 40 || c.risk_score_pct >= 70)) return false;
-      if (riskFilter === "low" && c.risk_score_pct >= 40) return false;
+      if (!matchesRiskFilter(c.risk_score_pct, riskFilter)) return false;
       if (policyFilter !== "all" && c.policy_type !== policyFilter) return false;
       if (
         searchTerm &&
@@ -393,10 +407,26 @@ export default function ClaimsQueue() {
   const openClaim = (id: string) => router.push(`/claim?id=${encodeURIComponent(id)}`);
 
   const riskTone = (pct: number) => {
-  if (pct >= 60) return { bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500", label: "HIGH" };
-  if (pct >= 10) return { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-500", label: "MED" };
-  return { bg: "bg-green-50", text: "text-green-700", dot: "bg-green-500", label: "LOW" };
-};
+    const tier = getRiskTier(pct);
+    if (tier === "high") {
+      return { bg: "bg-red-50", text: "text-red-700", dot: "bg-red-500", label: "HIGH" };
+    }
+    if (tier === "medium") {
+      return { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-500", label: "MED" };
+    }
+    return { bg: "bg-green-50", text: "text-green-700", dot: "bg-green-500", label: "LOW" };
+  };
+
+  const tierCounts = useMemo(() => {
+    if (!data) return { low: 0, medium: 0, high: 0 };
+    return data.claims.reduce(
+      (acc, c) => {
+        acc[getRiskTier(c.risk_score_pct)] += 1;
+        return acc;
+      },
+      { low: 0, medium: 0, high: 0 }
+    );
+  }, [data]);
 
   return (
     <>
@@ -1033,6 +1063,7 @@ export default function ClaimsQueue() {
                 }`}
               >
                 {r}
+                {r !== "all" && data ? ` (${tierCounts[r]})` : r === "all" && data ? ` (${data.total})` : ""}
               </button>
             ))}
           </div>
