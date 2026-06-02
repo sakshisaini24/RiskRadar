@@ -599,19 +599,6 @@ export default function ClaimsQueue() {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setPlanningMode((p) => !p)}
-                  className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border transition-all ${
-                    planningMode
-                      ? "bg-amber-400/20 text-amber-100 border-amber-300"
-                      : "bg-emerald-800/60 text-emerald-200 border-emerald-700"
-                  }`}
-                >
-                  {planningMode
-                    ? "Planning mode · 77% recall"
-                    : "Live holdout recall"}
-                </button>
                 <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border bg-emerald-800/60 text-emerald-200 border-emerald-700">
                   Threshold {sliderThreshold.toFixed(0)}%
                 </span>
@@ -661,21 +648,8 @@ export default function ClaimsQueue() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 gap-4 mb-4">
               <div className="bg-emerald-800/40 rounded-2xl p-4 border border-emerald-700">
-                <div className="text-[10px] font-black uppercase tracking-widest text-emerald-300">
-                  Recall used in ROI
-                </div>
-                <div className="text-2xl font-black text-white mt-1">
-                  {(roi.effectiveRecall * 100).toFixed(0)}%
-                </div>
-                <div className="text-[10px] text-emerald-300 mt-1">
-                  {planningMode
-                    ? `Conservative floor (holdout live: ${(roi.holdoutRecall * 100).toFixed(0)}%)`
-                    : `Holdout at ${sliderThreshold.toFixed(0)}% threshold`}
-                </div>
-              </div>
-              <div className="bg-emerald-800/40 rounded-2xl p-4 border border-emerald-700 md:col-span-2">
                 <div className="text-[10px] font-black uppercase tracking-widest text-emerald-300 mb-1">
                   Adjuster time returned
                 </div>
