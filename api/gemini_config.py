@@ -67,10 +67,16 @@ def extract_gemini_text(response: Any) -> str:
 def generate_gemini_text(model, prompt: str, max_output_tokens: int = 1024) -> str:
     """
     Call model.generate_content with thinking disabled where possible.
-    Retries once with 2× the token budget if the response looks too short.
+
+    On SDK 0.8.x thinking_config is silently dropped; we compensate by
+    using a larger token budget (8192) so thinking overhead still leaves
+    plenty of room for the visible answer.
+    Retries once with double the budget if the response looks too short.
     """
+    # 8192 ensures the answer is never crowded out by thinking tokens
+    effective = max(max_output_tokens, 8192)
     text = ""
-    for budget in (max_output_tokens, max_output_tokens * 2):
+    for budget in (effective, effective * 2):
         try:
             res = model.generate_content(
                 prompt,
@@ -78,7 +84,7 @@ def generate_gemini_text(model, prompt: str, max_output_tokens: int = 1024) -> s
             )
             text = extract_gemini_text(res)
         except Exception as exc:
-            raise exc  # let callers catch and label the error properly
+            raise exc
         if len(text) >= 80:
             return text
     return text
