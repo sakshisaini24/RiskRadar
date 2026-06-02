@@ -302,10 +302,22 @@ const looksLikeError = (text: string | undefined): boolean => {
   const lower = text.toLowerCase();
   return (
     lower.includes("error:") ||
+    lower.includes("gemini error") ||
+    lower.includes("key missing") ||
     lower.includes("404") ||
     lower.includes("is not found") ||
     lower.includes("is not supported")
   );
+};
+
+/** Gemini 2.5 can return a one-line stub when thinking ate the token budget (fixed server-side). */
+const looksLikeTruncatedBrief = (text: string | undefined): boolean => {
+  if (!text || looksLikeError(text)) return false;
+  if (text.length < 160) return true;
+  const lower = text.toLowerCase();
+  const hasSections =
+    lower.includes("legal impact") || lower.includes("recommended");
+  return !hasSections;
 };
 
 function renderHighlighted(text: string, matches: TriggerMatch[]) {
@@ -426,6 +438,7 @@ function RiskDashboard() {
 
   const activeModelText = data?.ai_consensus[activeModel];
   const activeModelHasError = looksLikeError(activeModelText);
+  const activeModelTruncated = looksLikeTruncatedBrief(activeModelText);
   const availableModels: ModelKey[] = (["groq_llama", "google_gemini"] as ModelKey[]).filter((k) =>
     Boolean(data?.ai_consensus[k])
   );
@@ -968,9 +981,18 @@ function RiskDashboard() {
                           </p>
                         </div>
                       ) : (
-                        <div className="prose prose-slate prose-sm max-w-none text-slate-600 leading-relaxed">
-                          <ReactMarkdown>{activeModelText}</ReactMarkdown>
-                        </div>
+                        <>
+                          {activeModelTruncated && (
+                            <div className="p-4 mb-4 bg-amber-50 border border-amber-200 rounded-2xl text-sm text-amber-900">
+                              <span className="font-bold">Incomplete brief.</span> Click{" "}
+                              <strong>Run Analysis</strong> again after restarting the API
+                              (Gemini 2.5 thinking budget fix). Cached results may be stale.
+                            </div>
+                          )}
+                          <div className="prose prose-slate prose-sm max-w-none text-slate-600 leading-relaxed">
+                            <ReactMarkdown>{activeModelText}</ReactMarkdown>
+                          </div>
+                        </>
                       )
                     ) : (
                       <p className="text-slate-400 text-sm italic">
@@ -984,7 +1006,7 @@ function RiskDashboard() {
                       <div className="flex items-center gap-2 mb-4">
                         <span className="text-lg">⚖️</span>
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                          Key US Legal Precedent
+                          Key US Legal Precedent (retrieved · not the AI brief)
                         </h4>
                       </div>
                       <a

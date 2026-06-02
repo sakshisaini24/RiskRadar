@@ -93,12 +93,11 @@ def generate_gemini_email(**kwargs):
             return {"error": "GOOGLE_API_KEY not configured"}
         import google.generativeai as genai
         genai.configure(api_key=gemini_key)
-        from api.gemini_config import gemini_model_name
+        from api.gemini_config import gemini_model_name, generate_gemini_text
 
         model = genai.GenerativeModel(gemini_model_name())
         prompt = _build_prompt(**kwargs)
-        resp = model.generate_content(prompt)
-        raw = (resp.text or "").strip()
+        raw = generate_gemini_text(model, prompt, max_output_tokens=512)
         parsed = _parse_email(raw)
         if not parsed:
             return {"error": "empty response"}

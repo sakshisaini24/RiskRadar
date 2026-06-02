@@ -13,7 +13,7 @@ import google.generativeai as genai
 from groq import Groq
 from dotenv import load_dotenv
 
-from api.gemini_config import gemini_model_name
+from api.gemini_config import gemini_model_name, generate_gemini_text
 
 load_dotenv()
 
@@ -201,15 +201,7 @@ Tone: professional, decisive, specific.
         # Google Gemini
         try:
             if self.gemini:
-                res = self.gemini.generate_content(
-                    prompt,
-                    generation_config=genai.types.GenerationConfig(
-                        temperature=0.0,
-                        top_p=1.0,
-                        max_output_tokens=500,
-                    ),
-                )
-                text = (res.text or "").strip()
+                text = generate_gemini_text(self.gemini, prompt, max_output_tokens=1024)
                 cited, unsupported = validate_citations(text, allowed)
                 responses["google_gemini"] = text
                 responses["google_gemini_grounding"] = {

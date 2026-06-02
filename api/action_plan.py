@@ -143,15 +143,14 @@ def generate_action_plan(
             import google.generativeai as genai
 
             genai.configure(api_key=gemini_key)
-            from api.gemini_config import gemini_model_name
+            from api.gemini_config import gemini_model_name, generate_gemini_text
 
             model = genai.GenerativeModel(gemini_model_name())
             prompt = _build_prompt(
                 claim_id, risk_pct, is_high_risk, incident,
                 trigger_phrases, top_warnings, brief_text,
             )
-            resp = model.generate_content(prompt)
-            raw = (resp.text or "").strip()
+            raw = generate_gemini_text(model, prompt, max_output_tokens=512)
             steps = _parse_steps_from_text(raw)
             if steps:
                 return {"steps": steps, "source": "gemini", "raw": raw}
