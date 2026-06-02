@@ -694,7 +694,7 @@ export default function ClaimsQueue() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-white/10 rounded-2xl p-5 border border-white/20">
                 <div className="text-[10px] font-black uppercase tracking-widest text-emerald-200 mb-2">
                   Monthly savings
@@ -715,37 +715,6 @@ export default function ClaimsQueue() {
                 </div>
                 <div className="text-[11px] text-emerald-200 mt-2">
                   Cost-per-miss: ${Math.round(roi.costPerMiss / 1000).toLocaleString()}k
-                </div>
-              </div>
-              <div className="bg-white/10 rounded-2xl p-5 border border-white/20">
-                <div className="text-[10px] font-black uppercase tracking-widest text-emerald-200 mb-2">
-                  Unit economics
-                </div>
-                <div className="space-y-1.5 text-[11px] text-emerald-100">
-                  <div className="flex justify-between">
-                    <span>Escalations expected / mo</span>
-                    <span className="font-mono font-black">
-                      {roi.escalationsPerMonth.toFixed(0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Caught by model</span>
-                    <span className="font-mono font-black">
-                      {roi.caughtByModel.toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Caught by random triage</span>
-                    <span className="font-mono font-black text-emerald-300">
-                      {roi.caughtByBaseline.toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between pt-1.5 border-t border-white/20">
-                    <span>Model lift</span>
-                    <span className="font-mono font-black text-white">
-                      +{roi.earlyDetections.toFixed(1)}
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1202,6 +1171,12 @@ function ROIInput({
   step: number;
   format: (v: number) => string;
 }) {
+  const [draft, setDraft] = useState<string>(String(value));
+
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
   return (
     <div className="bg-emerald-800/40 rounded-2xl p-4 border border-emerald-700">
       <div className="text-[10px] font-black uppercase tracking-widest text-emerald-300 mb-1">
@@ -1209,13 +1184,32 @@ function ROIInput({
       </div>
       <div className="text-xl font-black text-white mb-2">{format(value)}</div>
       <input
-        type="number"
-        min={min}
-        step={step}
-        value={value}
+        type="text"
+        inputMode="decimal"
+        value={draft}
         onChange={(e) => {
-          const parsed = parseFloat(e.target.value);
-          if (!Number.isNaN(parsed)) onChange(Math.max(min, parsed));
+          const raw = e.target.value;
+          setDraft(raw);
+          const cleaned = raw.replace(/,/g, "").trim();
+          if (!cleaned) return;
+          const parsed = Number(cleaned);
+          if (Number.isFinite(parsed)) onChange(Math.max(min, parsed));
+        }}
+        onBlur={() => {
+          const cleaned = draft.replace(/,/g, "").trim();
+          if (!cleaned) {
+            setDraft(String(value));
+            return;
+          }
+          const parsed = Number(cleaned);
+          if (!Number.isFinite(parsed)) {
+            setDraft(String(value));
+            return;
+          }
+          const clamped = Math.max(min, parsed);
+          const rounded = step >= 1 ? Math.round(clamped) : Math.round(clamped / step) * step;
+          onChange(rounded);
+          setDraft(String(rounded));
         }}
         className="w-full bg-emerald-950/40 border border-emerald-700 rounded-lg px-2 py-1 text-[11px] text-white outline-none focus:border-emerald-400 font-mono"
       />
