@@ -705,6 +705,9 @@ export default function ClaimsQueue() {
                 <div className="text-[11px] text-emerald-200 mt-2">
                   ~{roi.earlyDetections.toFixed(1)} escalations caught early vs random triage
                 </div>
+                <div className="text-[10px] text-emerald-300/90 mt-2 font-mono leading-relaxed">
+                  Formula: Monthly = EarlyDetections × CostPerMiss
+                </div>
               </div>
               <div className="bg-white/10 rounded-2xl p-5 border border-white/20">
                 <div className="text-[10px] font-black uppercase tracking-widest text-emerald-200 mb-2">
@@ -715,6 +718,9 @@ export default function ClaimsQueue() {
                 </div>
                 <div className="text-[11px] text-emerald-200 mt-2">
                   Cost-per-miss: ${Math.round(roi.costPerMiss / 1000).toLocaleString()}k
+                </div>
+                <div className="text-[10px] text-emerald-300/90 mt-2 font-mono leading-relaxed">
+                  Formula: Annual = MonthlySavings × 12
                 </div>
               </div>
             </div>
