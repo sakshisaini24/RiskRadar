@@ -143,7 +143,9 @@ def generate_action_plan(
             import google.generativeai as genai
 
             genai.configure(api_key=gemini_key)
-            model = genai.GenerativeModel("gemini-2.0-flash")
+            from api.gemini_config import gemini_model_name
+
+            model = genai.GenerativeModel(gemini_model_name())
             prompt = _build_prompt(
                 claim_id, risk_pct, is_high_risk, incident,
                 trigger_phrases, top_warnings, brief_text,

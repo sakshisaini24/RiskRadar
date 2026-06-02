@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RiskRadar — Problem Statement</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #1e293b;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    .slide {
+      width: 1280px;
+      height: 720px;
+      background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+      color: #f8fafc;
+      padding: 36px 48px 32px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 25px 50px rgba(0,0,0,.4);
+    }
+    .slide::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 5px;
+      background: linear-gradient(90deg, #fb923c, #f97316);
+    }
+    h1 {
+      font-size: 34px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      max-width: 900px;
+    }
+    .subtitle {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #94a3b8;
+      letter-spacing: 0.04em;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-top: 28px;
+      height: calc(100% - 130px);
+    }
+    .label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: #fb923c;
+      margin-bottom: 14px;
+    }
+    .pain-item {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .num {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: #38bdf8;
+      color: #0f172a;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pain-item:nth-child(4) .num { background: #fb923c; }
+    .pain-item h3 { font-size: 16px; margin-bottom: 4px; }
+    .pain-item p { font-size: 13px; color: #94a3b8; line-height: 1.4; }
+    .closing {
+      margin-top: 8px;
+      padding: 14px 16px;
+      border-left: 3px solid #fb923c;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.45;
+      color: #e2e8f0;
+    }
+    .funnel-step {
+      background: rgba(30, 41, 59, 0.9);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.15);
+    }
+    .funnel-step h4 {
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+    .funnel-step p { font-size: 11px; color: #94a3b8; }
+    .funnel-step.s1 h4 { color: #38bdf8; }
+    .funnel-step.s2 h4 { color: #94a3b8; }
+    .funnel-step.s3 h4 { color: #fb923c; }
+    .funnel-step.s4 h4 { color: #f87171; }
+    .arrow {
+      text-align: center;
+      color: #64748b;
+      font-size: 12px;
+      margin: 2px 0;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .stat {
+      background: rgba(30, 41, 59, 0.9);
+      border-radius: 8px;
+      padding: 12px 8px;
+      text-align: center;
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    .stat .big {
+      font-size: 22px;
+      font-weight: 800;
+      color: #fb923c;
+    }
+    .stat .small {
+      font-size: 10px;
+      color: #94a3b8;
+      margin-top: 6px;
+      line-height: 1.35;
+    }
+    footer {
+      position: absolute;
+      bottom: 20px;
+      left: 48px;
+      right: 48px;
+      text-align: center;
+      font-size: 11px;
+      color: #64748b;
+    }
+    @media print {
+      body { background: white; }
+      .slide { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="slide" id="slide">
+    <h1>When escalation is obvious, it's already too late</h1>
+    <p class="subtitle">Insurance claims · legal risk · early intervention</p>
+
+    <div class="grid">
+      <div>
+        <p class="label">THE PAIN</p>
+        <div class="pain-item">
+          <span class="num">1</span>
+          <div>
+            <h3>Specialists guess</h3>
+            <p>Gut feel + manual review of voluminous notes and structured data</p>
+          </div>
+        </div>
+        <div class="pain-item">
+          <span class="num">2</span>
+          <div>
+            <h3>Reactive, not predictive</h3>
+            <p>Red flags appear after the low-cost resolution window closes</p>
+          </div>
+        </div>
+        <div class="pain-item">
+          <span class="num">3</span>
+          <div>
+            <h3>Two costs</h3>
+            <p>Legal fees can exceed claim value · ~45 min/case on manual research</p>
+          </div>
+        </div>
+        <p class="closing">
+          We need intelligence that reads between the lines—before cases hit a point of no return.
+        </p>
+      </div>
+
+      <div>
+        <p class="label">THE STAKES</p>
+        <div class="funnel-step s1">
+          <h4>CLAIM FILE</h4>
+          <p>Notes · emails · calls · forms</p>
+        </div>
+        <div class="arrow">▼</div>
+        <div class="funnel-step s2">
+          <h4>TODAY</h4>
+          <p>Manual review · slow · subjective</p>
+        </div>
+        <div class="arrow">▼</div>
+        <div class="funnel-step s3">
+          <h4>ESCALATION OBVIOUS</h4>
+          <p>Window for cheap fix — closed</p>
+        </div>
+        <div class="arrow">▼</div>
+        <div class="funnel-step s4">
+          <h4>TOO LATE</h4>
+          <p>Legal fees ↑ · settlement leverage ↓</p>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="big">$$$</div><div class="small">Legal spend can exceed claim value</div></div>
+          <div class="stat"><div class="big">45 min</div><div class="small">Per case manual research</div></div>
+          <div class="stat"><div class="big">?</div><div class="small">Risk hidden in unstructured notes</div></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>RiskRadar — predict escalation early · explain why · act before legal costs run away</footer>
+  </div>
+  <p style="position:fixed;bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;color:#94a3b8;font-family:sans-serif;">
+    Screenshot this slide (Win+Shift+S) → Google Slides → Insert → Image
+  </p>
+</body>
+</html>

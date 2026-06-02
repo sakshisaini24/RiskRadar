@@ -13,6 +13,8 @@ import google.generativeai as genai
 from groq import Groq
 from dotenv import load_dotenv
 
+from api.gemini_config import gemini_model_name
+
 load_dotenv()
 
 MAX_CASES_IN_PROMPT = 6
@@ -119,7 +121,7 @@ class BriefGenerator:
         google_key = os.getenv("GEMINI_API_KEY")
         if google_key:
             genai.configure(api_key=google_key)
-            self.gemini = genai.GenerativeModel("gemini-1.5-flash")
+            self.gemini = genai.GenerativeModel(gemini_model_name())
         else:
             self.gemini = None
 

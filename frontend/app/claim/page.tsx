@@ -174,7 +174,7 @@ const MODEL_META: Record<ModelKey, { label: string; activeClass: string; dotClas
     dotClass: "bg-green-500",
   },
   google_gemini: {
-    label: "Gemini 1.5",
+    label: "Gemini 2.5",
     activeClass: "bg-blue-100 text-blue-700 border-blue-300",
     dotClass: "bg-blue-500",
   },
@@ -1303,7 +1303,7 @@ function RiskDashboard() {
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-[11px] font-bold">
-                            {k === "groq_llama" ? "Llama 3.1" : "Gemini 1.5"}
+                            {k === "groq_llama" ? "Llama 3.1" : "Gemini 2.5"}
                           </span>
                           <span
                             className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${

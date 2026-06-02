@@ -83,7 +83,7 @@ frontend/ Next.js 16        /           Triage Queue + Honest Perf Card
 |---|---|
 | ML | XGBoost 2.0, scikit-learn (IsotonicRegression, PSI), SHAP |
 | NLP / embeddings | sentence-transformers (MiniLM-L6), TF-IDF |
-| Text LLMs | Groq Llama 3.1, Google Gemini 1.5 — **temperature=0, citation-grounded** |
+| Text LLMs | Groq Llama 3.1, Google Gemini 2.5 Flash — **temperature=0, citation-grounded** |
 | Legal lookup | Indian Kanoon API, CourtListener (US) |
 | API | FastAPI + Uvicorn |
 | Frontend | Next.js 16, React 19, Tailwind CSS 4, ReactMarkdown |

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RiskRadar — Business Impact</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #134e4a;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    .slide {
+      width: 1280px;
+      height: 720px;
+      background: linear-gradient(145deg, #064e3b 0%, #065f46 50%, #0d9488 100%);
+      color: #fff;
+      padding: 32px 44px;
+      box-shadow: 0 25px 50px rgba(0,0,0,.35);
+    }
+    h1 { font-size: 32px; font-weight: 800; }
+    .sub { font-size: 12px; color: #a7f3d0; margin-top: 8px; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 24px;
+    }
+    .card {
+      background: rgba(6, 95, 70, 0.85);
+      border-radius: 12px;
+      padding: 18px 12px;
+      text-align: center;
+      border: 1px solid rgba(167, 243, 208, 0.2);
+    }
+    .card .big {
+      font-size: 38px;
+      font-weight: 800;
+      color: #fcd34d;
+      line-height: 1;
+    }
+    .card h3 { font-size: 11px; margin-top: 10px; font-weight: 700; }
+    .card p { font-size: 9px; color: #a7f3d0; margin-top: 6px; line-height: 1.35; }
+    .banner {
+      margin-top: 20px;
+      background: rgba(6, 95, 70, 0.9);
+      border-radius: 12px;
+      padding: 20px 24px;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 20px;
+      align-items: center;
+      border: 1px solid rgba(167, 243, 208, 0.15);
+    }
+    .banner .mega { font-size: 48px; font-weight: 800; color: #fcd34d; }
+    .banner .label { font-size: 10px; font-weight: 700; color: #fcd34d; letter-spacing: 0.08em; }
+    .banner .note { font-size: 11px; color: #a7f3d0; line-height: 1.45; }
+    .footer {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .footnote { text-align: center; font-size: 9px; color: #6ee7b7; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="slide">
+    <h1>Quantifiable business impact</h1>
+    <p class="sub">500 claims/mo · $289K avg claim · 77% conservative recall (holdout-validated)</p>
+
+    <div class="cards">
+      <div class="card">
+        <div class="big">108</div>
+        <h3>Adjuster hours returned / month</h3>
+        <p>37 min saved per deep review (45→8 min workflow)</p>
+      </div>
+      <div class="card">
+        <div class="big">~74</div>
+        <h3>Escalations caught early / month</h3>
+        <p>vs random triage at 35% baseline recall</p>
+      </div>
+      <div class="card">
+        <div class="big">120%</div>
+        <h3>Higher catch rate</h3>
+        <p>77% model recall vs 35% random queue</p>
+      </div>
+      <div class="card">
+        <div class="big">$71K</div>
+        <h3>Annual labor savings</h3>
+        <p>At $55/hr — capacity you can redeploy</p>
+      </div>
+    </div>
+
+    <div class="banner">
+      <div>
+        <div class="label">MODELED ESCALATION LOSS AVOIDANCE</div>
+        <div class="mega">$637M</div>
+        <div class="note">annual · 3.5× escalated-cost multiplier · ~$723K per early catch</div>
+      </div>
+      <p class="note">
+        Stress-test every assumption in the live RiskRadar ROI calculator on your queue dashboard.
+        Conservative floor: operational hours and labor. Upside: fewer files crossing into
+        legal spend that can exceed claim value.
+      </p>
+    </div>
+
+    <p class="footer">Faster triage · earlier flags · ROI tied to holdout metrics, not gut feel</p>
+    <p class="footnote">Matches in-app ROI calculator · Planning mode · 77% recall</p>
+  </div>
+</body>
+</html>
