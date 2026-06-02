@@ -556,13 +556,6 @@ function RiskDashboard() {
               )}
             </div>
           )}
-          {metrics?.status === "ok" && (
-            <div className="mt-3 inline-flex items-center gap-2 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="font-bold">Model: {(metrics.recall * 100).toFixed(1)}% recall</span>
-              <span className="opacity-60">· validated on {metrics.total_evaluated} claims</span>
-            </div>
-          )}
         </div>
 
         <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
@@ -1006,7 +999,7 @@ function RiskDashboard() {
                       <div className="flex items-center gap-2 mb-4">
                         <span className="text-lg">⚖️</span>
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                          Key US Legal Precedent (retrieved · not the AI brief)
+                          Key US Legal Precedent
                         </h4>
                       </div>
                       <a
