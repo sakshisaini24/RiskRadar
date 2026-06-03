@@ -30,6 +30,7 @@ _TFIDF_VEC = None
 _TFIDF_MATRIX = None
 _TFIDF_IDS: Optional[np.ndarray] = None
 _TFIDF_META: Optional[pd.DataFrame] = None
+_TFIDF_INCIDENT: Optional[np.ndarray] = None
 
 
 def _load():
@@ -54,7 +55,7 @@ _load()
 
 
 def _load_tfidf_fallback() -> bool:
-    global _TFIDF_VEC, _TFIDF_MATRIX, _TFIDF_IDS, _TFIDF_META
+    global _TFIDF_VEC, _TFIDF_MATRIX, _TFIDF_IDS, _TFIDF_META, _TFIDF_INCIDENT
     if _TFIDF_MATRIX is not None:
         return True
     paths = (VECTORIZER_PATH, TEXT_CSV, STRUCTURED_CSV)
@@ -78,6 +79,10 @@ def _load_tfidf_fallback() -> bool:
                 "incident_type", "policy_type", "approved_amount"]
         keep = [c for c in keep if c in struct.columns]
         _TFIDF_META = struct[keep]
+        incident_map = dict(
+            zip(struct["claim_id"].astype(str), struct.get("incident_type", pd.Series(dtype=str)).astype(str))
+        )
+        _TFIDF_INCIDENT = np.array([incident_map.get(str(cid), "") for cid in _TFIDF_IDS])
         print(f"[similar_claims] TF-IDF fallback ready: {len(_TFIDF_IDS)} claims")
         return True
     except Exception as e:
@@ -143,7 +148,56 @@ def find_similar(claim_id: str, top_k: int = 5) -> Optional[dict]:
     return _neighbours_from_indices(cid, top_idx, sims, _IDS, _META)
 
 
-def find_similar_by_text(combined_text: str, query_claim_id: str, top_k: int = 5) -> Optional[dict]:
+def _neighbours_from_ranked(
+    query_claim_id: str,
+    ranked_indices: np.ndarray,
+    sims: np.ndarray,
+    ids: np.ndarray,
+    meta_df: pd.DataFrame,
+    top_k: int,
+) -> Optional[dict]:
+    cid = str(query_claim_id).strip()
+    neighbours = []
+    esc_count = 0
+    for j in ranked_indices:
+        nid = str(ids[j])
+        if nid == cid:
+            continue
+        row = meta_df[meta_df["claim_id"] == nid]
+        meta = {} if row.empty else row.iloc[0].to_dict()
+        outcome = str(meta.get("target_outcome", "Unknown"))
+        if outcome == "Escalated":
+            esc_count += 1
+        neighbours.append({
+            "claim_id": nid,
+            "similarity": round(float(sims[j]), 4),
+            "outcome": outcome,
+            "days_open": _safe_int(meta.get("days_open")),
+            "total_claimed": _safe_float(meta.get("total_claimed")),
+            "approved_amount": _safe_float(meta.get("approved_amount")),
+            "incident_type": _safe_str(meta.get("incident_type")),
+            "policy_type": _safe_str(meta.get("policy_type")),
+        })
+        if len(neighbours) >= top_k:
+            break
+    if not neighbours:
+        return None
+    return {
+        "query_claim_id": cid,
+        "neighbours": neighbours,
+        "escalated_in_top_k": esc_count,
+        "top_k": len(neighbours),
+        "escalation_rate_in_neighbourhood":
+            round(esc_count / len(neighbours), 3) if neighbours else 0.0,
+    }
+
+
+def find_similar_by_text(
+    combined_text: str,
+    query_claim_id: str,
+    top_k: int = 5,
+    incident_type: Optional[str] = None,
+) -> Optional[dict]:
     """Nearest neighbours for Salesforce/demo claims using Model B TF-IDF vectors."""
     text = (combined_text or "").strip()
     if not text or not _load_tfidf_fallback():
@@ -151,20 +205,22 @@ def find_similar_by_text(combined_text: str, query_claim_id: str, top_k: int = 5
     assert _TFIDF_VEC is not None and _TFIDF_MATRIX is not None
     assert _TFIDF_IDS is not None and _TFIDF_META is not None
 
+    candidate_idx = np.arange(len(_TFIDF_IDS))
+    if incident_type and _TFIDF_INCIDENT is not None:
+        target = incident_type.strip().lower()
+        type_mask = np.array([str(t).strip().lower() == target for t in _TFIDF_INCIDENT])
+        if type_mask.sum() >= top_k:
+            candidate_idx = np.where(type_mask)[0]
+
+    matrix = _TFIDF_MATRIX[candidate_idx]
+    ids = _TFIDF_IDS[candidate_idx]
+
     q = _TFIDF_VEC.transform([text])
-    sims = cosine_similarity(q, _TFIDF_MATRIX)[0]
-    cid = str(query_claim_id).strip()
+    sims = cosine_similarity(q, matrix)[0]
     ranked = np.argsort(-sims)
-    selected = []
-    for j in ranked:
-        if str(_TFIDF_IDS[j]) == cid:
-            continue
-        selected.append(j)
-        if len(selected) >= top_k:
-            break
-    if not selected:
-        return None
-    return _neighbours_from_indices(cid, np.array(selected), sims, _TFIDF_IDS, _TFIDF_META)
+    return _neighbours_from_ranked(
+        query_claim_id, ranked, sims, ids, _TFIDF_META, top_k
+    )
 
 
 def index_stats():

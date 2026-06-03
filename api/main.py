@@ -667,7 +667,12 @@ async def get_prediction(claim_id: str):
     if similar is None:
         sim_text = combined_text(ext) if ext else " ".join(p for p in (email_text, adjuster_text) if p)
         if sim_text.strip():
-            similar = find_similar_by_text(sim_text, claim_id, top_k=5)
+            similar = find_similar_by_text(
+                sim_text,
+                claim_id,
+                top_k=5,
+                incident_type=str(ext.get("incident_type") or incident) if ext else incident,
+            )
 
     response = {
         "claim_id": claim_id,

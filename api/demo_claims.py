@@ -33,19 +33,36 @@ def _demo_payloads():
             "claim_status": "Open",
             "action_status": "No action taken",
             "incident_description": (
-                "Claimant reports vehicle theft from retail parking lot. "
-                "Large settlement gap vs insurer offer. Attorney involved."
+                "On 2024-03-08, claimant Linda Moore reported theft of vehicle from a "
+                "retail parking lot in New York. Her 2022 Ford Explorer was stolen while "
+                "she was shopping; NYPD precinct report #2024-VT-1187 was filed the same day. "
+                "Police report submitted. GPS data provided by claimant supports the vehicle "
+                "was taken from the lot. Comprehensive claim filed under Liability policy for "
+                "vehicle replacement value of $333,692 plus personal property removed with the "
+                "vehicle. Insurer requested additional documentation including proof of ownership "
+                "history, keys, and title, which claimant provided within 10 days. Some delay in "
+                "processing has occurred due to SIU review flag for high claimed value vs regional "
+                "vehicle theft baseline. Insurer offer of $110,447 leaves a 67% settlement gap. "
+                "Independent appraiser replacement-cost estimate is substantially higher than "
+                "insurer ACV calculation. Claimant sustained Moderate Laceration at the scene "
+                "documented in ER visit records."
             ),
             "email_transcript": (
                 "From: linda.moore@email.com\n"
-                "Subject: Final notice before legal action — Claim SF-DEMO-2001\n\n"
-                "I have retained legal counsel. Your offer is unacceptable. "
-                "If I do not hear from a supervisor within 48 hours I will proceed "
-                "with litigation. This delay is causing severe financial hardship."
+                "Subject: Final notice before legal action — stolen vehicle Claim SF-DEMO-2001\n\n"
+                "My vehicle was stolen from the retail parking lot and your offer does not reflect "
+                "the replacement cost documented in the police report and independent appraisal. "
+                "I have retained legal counsel. Your offer is unacceptable. If I do not hear from "
+                "a supervisor within 48 hours I will proceed with litigation. This delay is causing "
+                "severe financial hardship."
             ),
             "adjuster_notes": (
-                "High settlement gap. Attorney on file. Claimant hostile on last call. "
-                "No senior review scheduled yet. Recommend immediate escalation review."
+                "Vehicle theft file — liability coverage. Police report and GPS ping log on file. "
+                "Claim open 142 days. High settlement gap on stolen vehicle ACV vs claimant "
+                "replacement-cost demand. Attorney on file; demand letter received. Claimant "
+                "hostile on last call regarding repeated theft documentation requests. Multiple "
+                "proof-of-ownership submissions completed. No senior review scheduled yet. "
+                "Recommend immediate escalation review."
             ),
             "activities": [
                 {
@@ -154,14 +171,15 @@ def _demo_payloads():
 
 
 def seed_demo_claims(force: bool = False) -> int:
-    """Insert demo open cases if missing. Returns count seeded."""
-    seeded = 0
+    """Insert or refresh demo open cases. Returns count newly created."""
+    created = 0
     for payload in _demo_payloads():
         cid = payload["claim_id"]
-        if not force and get(cid):
-            continue
+        if not get(cid):
+            created += 1
         upsert(payload)
-        seeded += 1
-    if seeded:
-        print(f"[demo] Seeded {seeded} open high-risk demo case(s): {', '.join(DEMO_CLAIM_IDS)}")
-    return seeded
+    if created:
+        print(f"[demo] Seeded {created} open high-risk demo case(s): {', '.join(DEMO_CLAIM_IDS)}")
+    else:
+        print(f"[demo] Refreshed demo case fixtures ({len(DEMO_CLAIM_IDS)} cases)")
+    return created

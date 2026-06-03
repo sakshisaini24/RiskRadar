@@ -232,9 +232,13 @@ def _optional_int(val) -> Optional[int]:
 
 
 def combined_text(row: Dict[str, Any]) -> str:
-    parts = [
+    parts = []
+    incident_type = str(row.get("incident_type") or "").strip()
+    if incident_type:
+        parts.append(f"Incident type: {incident_type}.")
+    parts.extend([
         row.get("incident_description") or "",
         row.get("email_transcript") or "",
         row.get("adjuster_notes") or "",
-    ]
+    ])
     return " ".join(p for p in parts if p).strip()
