@@ -97,6 +97,16 @@ function matchesRiskFilter(pct: number, filter: RiskFilter): boolean {
   return getRiskTier(pct) === filter;
 }
 
+function normalizeClaimStatus(status?: string): string {
+  const s = (status || "").trim();
+  return s || "Unknown";
+}
+
+function matchesStatusFilter(status: string | undefined, filter: string): boolean {
+  if (filter === "all") return true;
+  return normalizeClaimStatus(status).toLowerCase() === filter.toLowerCase();
+}
+
 const PLOT_LABELS: Record<PlotName, string> = {
   calibration_curve: "Calibration",
   pr_curve: "Precision-Recall",
@@ -211,6 +221,7 @@ export default function ClaimsQueue() {
   const [error, setError] = useState<string | null>(null);
   const [riskFilter, setRiskFilter] = useState<RiskFilter>("all");
   const [policyFilter, setPolicyFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   const fetchFeedbackSummary = useCallback(async () => {
@@ -391,11 +402,35 @@ export default function ClaimsQueue() {
     return Array.from(new Set(data.claims.map((c) => c.policy_type).filter(Boolean))).sort();
   }, [data]);
 
+  const statusOptions = useMemo(() => {
+    if (!data) return [];
+    const order = ["Open", "Escalated", "Resolved", "Unknown"];
+    const statuses = Array.from(
+      new Set(data.claims.map((c) => normalizeClaimStatus(c.claim_status)))
+    );
+    return statuses.sort((a, b) => {
+      const ai = order.indexOf(a);
+      const bi = order.indexOf(b);
+      if (ai !== -1 || bi !== -1) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      return a.localeCompare(b);
+    });
+  }, [data]);
+
+  const statusCounts = useMemo(() => {
+    if (!data) return {} as Record<string, number>;
+    return data.claims.reduce<Record<string, number>>((acc, c) => {
+      const key = normalizeClaimStatus(c.claim_status);
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+  }, [data]);
+
   const filteredClaims = useMemo(() => {
     if (!data) return [];
     return data.claims.filter((c) => {
       if (!matchesRiskFilter(c.risk_score_pct, riskFilter)) return false;
       if (policyFilter !== "all" && c.policy_type !== policyFilter) return false;
+      if (!matchesStatusFilter(c.claim_status, statusFilter)) return false;
       if (
         searchTerm &&
         !c.claim_id.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -404,7 +439,7 @@ export default function ClaimsQueue() {
         return false;
       return true;
     });
-  }, [data, riskFilter, policyFilter, searchTerm]);
+  }, [data, riskFilter, policyFilter, statusFilter, searchTerm]);
 
   const openClaim = (id: string) => router.push(`/claim?id=${encodeURIComponent(id)}`);
 
@@ -1030,6 +1065,18 @@ export default function ClaimsQueue() {
             {policyOptions.map((p) => (
               <option key={p} value={p}>
                 {p}
+              </option>
+            ))}
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm outline-none"
+          >
+            <option value="all">All Statuses</option>
+            {statusOptions.map((s) => (
+              <option key={s} value={s}>
+                {s} ({statusCounts[s] ?? 0})
               </option>
             ))}
           </select>
