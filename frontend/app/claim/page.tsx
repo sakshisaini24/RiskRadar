@@ -135,6 +135,7 @@ interface ClaimRecord {
   approved_amount?: number | null;
   total_claimed?: number | null;
   claimant_name?: string | null;
+  days_open?: number | null;
   is_historical?: boolean;
 }
 
@@ -661,6 +662,15 @@ function RiskDashboard() {
                               ${data.claim_record.approved_amount.toLocaleString(undefined, {
                                 maximumFractionDigits: 0,
                               })}
+                            </span>
+                          </div>
+                        )}
+                      {data.claim_record.target_outcome === "Escalated" &&
+                        data.claim_record.days_open != null && (
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-slate-500 text-xs">Days open at escalation</span>
+                            <span className="text-xs font-bold text-slate-800">
+                              {data.claim_record.days_open} days
                             </span>
                           </div>
                         )}

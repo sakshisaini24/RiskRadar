@@ -238,12 +238,14 @@ def _build_claim_record(claim_id: str, ext: Optional[Dict[str, Any]]) -> Dict[st
         }
     row = match.iloc[0]
     approved = row.get("approved_amount")
+    days_open = row.get("days_open")
     return {
         "target_outcome": str(row.get("target_outcome") or "").strip() or None,
         "payment_status": str(row.get("payment_status") or "").strip() or None,
         "approved_amount": float(approved) if pd.notna(approved) else None,
         "total_claimed": float(row["total_claimed"]) if pd.notna(row.get("total_claimed")) else None,
         "claimant_name": str(row.get("claimant_name") or "").strip() or None,
+        "days_open": int(days_open) if pd.notna(days_open) else None,
         "is_historical": True,
     }
 
@@ -632,9 +634,10 @@ async def get_prediction(claim_id: str):
             recommended_actions = {"steps": fallback, "source": "brief"}
 
     outcome = (claim_record.get("target_outcome") or "").strip().lower()
-    is_resolved = outcome == "resolved"
+    has_known_outcome = outcome in ("resolved", "escalated")
     timeline = None
-    if risk_pct >= TTE_RISK_THRESHOLD and not is_resolved:
+    # Forward-looking timing only for open cases (no final label) above risk threshold.
+    if risk_pct >= TTE_RISK_THRESHOLD and not has_known_outcome:
         timeline = predict_timeline(claim_id)
     similar = find_similar(claim_id, top_k=5)
 
