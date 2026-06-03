@@ -2,6 +2,8 @@ import os
 import re
 import requests
 
+from api.demo_us_precedents import demo_us_precedents
+
 API_ROOT = "https://www.courtlistener.com/api/rest/v4"
 MAX_EXCERPT_CHARS = 1800
 
@@ -156,6 +158,8 @@ class USLawClient:
         """How this US case connects to the open claim (for UI + Q&A)."""
         if not case:
             return None
+        if case.get("spotlight_relevance"):
+            return case["spotlight_relevance"]
         note = self._build_relevance_note(case, incident_type, matched_query)
         excerpt = self._fetch_opinion_excerpt(case)
         if not self.groq_key or len(excerpt) < 120:
@@ -260,12 +264,15 @@ class USLawClient:
         headers = {"Authorization": f"Token {self.api_key}"}
         last_error = None
 
-        for query in search_terms:
+        for query in search_terms[:1]:
             params = {"q": query, "type": "o", "order_by": "score desc"}
             try:
                 response = requests.get(
                     self.base_url, headers=headers, params=params, timeout=10
                 )
+                if self._is_rate_limited(response):
+                    print("[USLawClient] CourtListener 429 — daily quota exceeded")
+                    return [], "rate_limited"
                 if response.status_code != 200:
                     last_error = f"HTTP {response.status_code}: {response.text[:200]}"
                     print(f"[USLawClient] {last_error} for query='{query}'")
@@ -316,6 +323,22 @@ class USLawClient:
             query = f"insurance {query}"
         return query
 
+    def _use_demo_fallback(self) -> bool:
+        if os.getenv("DEMO_US_FALLBACK", "true").lower() in ("1", "true", "yes"):
+            return True
+        return False
+
+    @staticmethod
+    def _is_rate_limited(response) -> bool:
+        return response is not None and response.status_code == 429
+
+    def _demo_or_empty(self, incident_type, trigger_phrases, top_warnings, reason: str):
+        if self._use_demo_fallback():
+            print(f"[USLawClient] {reason} — using demo US precedent library")
+            cases, status, mq = demo_us_precedents(incident_type, trigger_phrases, top_warnings)
+            return cases, status, mq
+        return [], "error", None
+
     def search_us_precedents_matched(self, incident_type, trigger_phrases=None, top_warnings=None):
         """
         Fact-matched search: builds a query from this specific claim's evidence.
@@ -323,17 +346,26 @@ class USLawClient:
         Returns (results, status, matched_query) where matched_query is None if fallback was used.
         """
         if not self.api_key:
-            return [], "no_key", None
+            return self._demo_or_empty(
+                incident_type, trigger_phrases, top_warnings, "No API key"
+            )
 
         matched_query = self.build_fact_matched_query(incident_type, trigger_phrases, top_warnings)
         headers = {"Authorization": f"Token {self.api_key}"}
 
-        # Attempt 1: fact-matched query
+        # Attempt 1: fact-matched query (single call — avoid burning quota)
         try:
             params = {"q": matched_query, "type": "o", "order_by": "score desc"}
             response = requests.get(
                 self.base_url, headers=headers, params=params, timeout=10
             )
+            if self._is_rate_limited(response):
+                return self._demo_or_empty(
+                    incident_type,
+                    trigger_phrases,
+                    top_warnings,
+                    "CourtListener rate limit (429)",
+                )
             if response.status_code == 200:
                 results = response.json().get("results", []) or []
                 if results:
@@ -350,14 +382,24 @@ class USLawClient:
         except Exception as e:
             print(f"[USLawClient] Fact-matched exception for '{matched_query}': {e}")
 
-        # Fallback: generic search (no matched_query returned)
+        # Fallback: one generic query only (quota-conscious)
         generic_results, status = self.search_us_precedents(incident_type)
-        return generic_results, status, None
+        if generic_results:
+            return generic_results, status, matched_query
+        if status == "rate_limited":
+            return self._demo_or_empty(
+                incident_type, trigger_phrases, top_warnings, "CourtListener rate limit (429)"
+            )
+        return self._demo_or_empty(
+            incident_type, trigger_phrases, top_warnings, "Live search empty"
+        )
 
     def generate_case_brief(self, case):
         """Generate a grounded 2-3 sentence summary from CourtListener source text."""
         if not case:
             return None
+        if case.get("spotlight_brief"):
+            return case["spotlight_brief"]
 
         excerpt = self._fetch_opinion_excerpt(case)
         if not excerpt:

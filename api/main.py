@@ -105,10 +105,13 @@ except Exception as e:
 
 @app.get("/health")
 async def health():
+    cl_key = bool((os.getenv("COURTLISTENER_API_KEY") or "").strip())
     return {
         "status": "ok",
         "structured_rows": len(STRUCTURED_DATA) if not STRUCTURED_DATA.empty else 0,
         "external_claims": len(list_external_claims()),
+        "courtlistener_key_set": cl_key,
+        "demo_us_fallback": os.getenv("DEMO_US_FALLBACK", "true"),
     }
 
 
@@ -336,9 +339,13 @@ def _queue_row(row_dict: Dict[str, Any], source: str) -> Dict[str, Any]:
 
 
 def get_legal_context(incident, trigger_phrases=None, top_warnings=None, claim_id=None):
-    cache_key = f"{incident}|{claim_id or ''}"
+    us_tag = "cl" if us_law.api_key else "demo"
+    cache_key = f"{incident}|{claim_id or ''}|{us_tag}|v2"
     if cache_key in LEGAL_CACHE:
-        return LEGAL_CACHE[cache_key]
+        cached = LEGAL_CACHE[cache_key]
+        if cached.get("us_cases"):
+            return cached
+        LEGAL_CACHE.pop(cache_key, None)
 
     in_cases, in_status = [], "ok"
     try:
@@ -601,7 +608,13 @@ async def get_prediction(claim_id: str):
     claim_id = str(claim_id).strip()
 
     if claim_id in PREDICT_CACHE:
-        return _with_adjuster_verdict(PREDICT_CACHE[claim_id])
+        cached = PREDICT_CACHE[claim_id]
+        precs = (cached.get("legal_context") or {}).get("precedents") or []
+        us_n = sum(1 for p in precs if str(p.get("jurisdiction", "")).upper() == "US")
+        if us_n == 0:
+            PREDICT_CACHE.pop(claim_id, None)
+        else:
+            return _with_adjuster_verdict(cached)
 
     unstructured = get_unstructured_for_claim(claim_id)
     email_text = unstructured.get("email_transcript", "") if unstructured else ""
