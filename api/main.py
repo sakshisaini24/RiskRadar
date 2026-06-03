@@ -32,6 +32,7 @@ from api.external_claims import (
     list_all as list_external_claims,
     reload_from_disk,
 )
+from api.demo_claims import seed_demo_claims
 from api.sf_scoring import build_feature_row
 from api.integrations.salesforce import (
     ingest_from_webhook,
@@ -153,7 +154,12 @@ def _compute_metrics_background():
 
 @app.on_event("startup")
 async def _startup():
+    global QUEUE_SCORE_CACHE
     reload_from_disk()
+    if os.getenv("DEMO_SEED_CLAIMS", "true").lower() in ("1", "true", "yes"):
+        n = seed_demo_claims()
+        if n:
+            QUEUE_SCORE_CACHE.clear()
     _warm_queue_cache()
     threading.Thread(target=_compute_metrics_background, daemon=True).start()
 
@@ -172,11 +178,12 @@ def get_unstructured_for_claim(claim_id):
     cid = str(claim_id).strip()
     ext = get_external_claim(cid)
     if ext:
+        src = "demo" if cid.startswith("SF-DEMO-") else "salesforce"
         return {
             "incident_description": ext.get("incident_description") or "",
             "adjuster_notes": ext.get("adjuster_notes") or "",
             "email_transcript": ext.get("email_transcript") or "",
-            "source": "salesforce",
+            "source": src,
             "salesforce_case_id": ext.get("salesforce_case_id"),
             "salesforce_case_number": ext.get("salesforce_case_number"),
             "claimant_name": ext.get("claimant_name"),
@@ -211,7 +218,9 @@ def _build_claim_record(claim_id: str, ext: Optional[Dict[str, Any]]) -> Dict[st
     if ext:
         return {
             "target_outcome": None,
-            "payment_status": None,
+            "claim_status": str(ext.get("claim_status") or "Open"),
+            "action_status": str(ext.get("action_status") or "No action taken"),
+            "payment_status": ext.get("payment_status"),
             "approved_amount": ext.get("approved_amount"),
             "total_claimed": ext.get("total_claimed"),
             "claimant_name": ext.get("claimant_name"),
@@ -241,6 +250,8 @@ def _build_claim_record(claim_id: str, ext: Optional[Dict[str, Any]]) -> Dict[st
     days_open = row.get("days_open")
     return {
         "target_outcome": str(row.get("target_outcome") or "").strip() or None,
+        "claim_status": str(row.get("target_outcome") or "").strip() or None,
+        "action_status": "Closed (historical)",
         "payment_status": str(row.get("payment_status") or "").strip() or None,
         "approved_amount": float(approved) if pd.notna(approved) else None,
         "total_claimed": float(row["total_claimed"]) if pd.notna(row.get("total_claimed")) else None,
@@ -308,8 +319,10 @@ def _queue_row(row_dict: Dict[str, Any], source: str) -> Dict[str, Any]:
         "risk_score_pct": round(risk, 2),
         "is_high_risk": is_high,
         "source": source,
+        "claim_status": row_dict.get("claim_status") or "Open",
+        "action_status": row_dict.get("action_status") or "",
     }
-    if source == "salesforce":
+    if source in ("salesforce", "demo"):
         out["salesforce_case_id"] = row_dict.get("salesforce_case_id")
         out["salesforce_case_number"] = row_dict.get("salesforce_case_number")
     return out
@@ -511,6 +524,8 @@ async def claims_list():
                 "state": str(row.get("state", "") or ""),
                 "email_text": email_text,
                 "adjuster_text": adjuster_text,
+                "claim_status": str(row.get("target_outcome") or ""),
+                "action_status": "Closed (historical)",
             }, "dataset"))
 
     for ext in list_external_claims():
@@ -518,6 +533,7 @@ async def claims_list():
         if cid in seen:
             continue
         seen.add(cid)
+        is_demo = cid.startswith("SF-DEMO-")
         claims.append(_queue_row({
             "claim_id": cid,
             "claimant_name": ext.get("claimant_name") or "Salesforce Case",
@@ -530,7 +546,9 @@ async def claims_list():
             "adjuster_text": ext.get("adjuster_notes") or "",
             "salesforce_case_id": ext.get("salesforce_case_id"),
             "salesforce_case_number": ext.get("salesforce_case_number"),
-        }, "salesforce"))
+            "claim_status": ext.get("claim_status") or "Open",
+            "action_status": ext.get("action_status") or "No action taken",
+        }, "demo" if is_demo else "salesforce"))
 
     claims.sort(key=lambda c: c["risk_score_pct"], reverse=True)
     total = len(claims)
@@ -633,7 +651,7 @@ async def get_prediction(claim_id: str):
         if fallback:
             recommended_actions = {"steps": fallback, "source": "brief"}
 
-    outcome = (claim_record.get("target_outcome") or "").strip().lower()
+    outcome = (claim_record.get("target_outcome") or claim_record.get("claim_status") or "").strip().lower()
     has_known_outcome = outcome in ("resolved", "escalated")
     timeline = None
     # Forward-looking timing only for open cases (no final label) above risk threshold.

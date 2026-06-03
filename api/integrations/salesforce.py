@@ -68,6 +68,8 @@ def normalize_webhook_payload(body: Dict[str, Any]) -> Dict[str, Any]:
         "legal_rep": body.get("legal_rep") or body.get("Legal_Rep__c"),
         "adjuster_level": body.get("adjuster_level") or body.get("Adjuster_Level__c"),
         "payment_status": body.get("payment_status") or body.get("Payment_Status__c"),
+        "claim_status": body.get("claim_status") or body.get("Claim_Status__c") or "Open",
+        "action_status": body.get("action_status") or body.get("Action_Status__c") or "",
         "doi_complaint": body.get("doi_complaint") or body.get("DOI_Complaint__c"),
         "activities": body.get("activities") or body.get("Activities") or [],
         "structured": body.get("structured") or {},

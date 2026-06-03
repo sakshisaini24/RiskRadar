@@ -131,6 +131,8 @@ interface CalibrationInfo {
 
 interface ClaimRecord {
   target_outcome?: string | null;
+  claim_status?: string | null;
+  action_status?: string | null;
   payment_status?: string | null;
   approved_amount?: number | null;
   total_claimed?: number | null;
@@ -141,7 +143,7 @@ interface ClaimRecord {
 
 interface RiskData {
   claim_id: string;
-  source?: "dataset" | "salesforce";
+  source?: "dataset" | "salesforce" | "demo";
   salesforce_case_id?: string;
   salesforce_case_number?: string;
   claim_record?: ClaimRecord;
@@ -557,6 +559,11 @@ function RiskDashboard() {
           <p className="text-slate-500 font-medium">
             Deep-dive risk intelligence for an individual claim
           </p>
+          {data?.source === "demo" && (
+            <div className="mt-2 inline-flex items-center gap-2 text-[11px] text-violet-700 bg-violet-50 border border-violet-200 rounded-full px-3 py-1 font-bold">
+              Demo · Open case
+            </div>
+          )}
           {data?.source === "salesforce" && (
             <div className="mt-2 inline-flex items-center gap-2 text-[11px] text-[#0176D3] bg-[#E8F4FD] border border-[#B4D9F5] rounded-full px-3 py-1 font-bold">
               Salesforce Case
@@ -628,7 +635,14 @@ function RiskDashboard() {
                       Claim Status
                     </h3>
                     <div className="space-y-2 text-sm">
-                      {data.claim_record.target_outcome ? (
+                      {data.claim_record.claim_status && !data.claim_record.target_outcome ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-500 text-xs">Case status</span>
+                          <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
+                            {data.claim_record.claim_status}
+                          </span>
+                        </div>
+                      ) : data.claim_record.target_outcome ? (
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-slate-500 text-xs">Historical outcome</span>
                           <span
@@ -644,6 +658,20 @@ function RiskDashboard() {
                       ) : (
                         <div className="text-xs text-slate-500 italic">
                           Open case — final outcome not in dataset (e.g. Salesforce)
+                        </div>
+                      )}
+                      {data.claim_record.action_status && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-500 text-xs">Adjuster action</span>
+                          <span
+                            className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${
+                              data.claim_record.action_status === "No action taken"
+                                ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                : "bg-slate-100 text-slate-700 border border-slate-200"
+                            }`}
+                          >
+                            {data.claim_record.action_status}
+                          </span>
                         </div>
                       )}
                       {data.claim_record.payment_status && (

@@ -196,6 +196,8 @@ def upsert(payload: Dict[str, Any]) -> Dict[str, Any]:
         "legal_rep": str(payload.get("legal_rep") or structured.get("legal_rep") or ""),
         "adjuster_level": str(payload.get("adjuster_level") or structured.get("adjuster_level") or ""),
         "payment_status": str(payload.get("payment_status") or structured.get("payment_status") or ""),
+        "claim_status": str(payload.get("claim_status") or structured.get("claim_status") or "Open"),
+        "action_status": str(payload.get("action_status") or structured.get("action_status") or ""),
         "doi_complaint": int(payload.get("doi_complaint") or structured.get("doi_complaint") or 0),
         "email_transcript": email_transcript,
         "adjuster_notes": adjuster_notes,

@@ -30,7 +30,9 @@ interface QueueClaim {
   state: string;
   risk_score_pct: number;
   is_high_risk: boolean;
-  source?: "dataset" | "salesforce";
+  claim_status?: string;
+  action_status?: string;
+  source?: "dataset" | "salesforce" | "demo";
   salesforce_case_id?: string;
   salesforce_case_number?: string;
 }
@@ -405,6 +407,14 @@ export default function ClaimsQueue() {
   }, [data, riskFilter, policyFilter, searchTerm]);
 
   const openClaim = (id: string) => router.push(`/claim?id=${encodeURIComponent(id)}`);
+
+  const statusBadge = (status?: string) => {
+    const s = (status || "").toLowerCase();
+    if (s === "open") return "bg-sky-100 text-sky-800 border-sky-200";
+    if (s === "escalated") return "bg-red-100 text-red-800 border-red-200";
+    if (s === "resolved") return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    return "bg-slate-100 text-slate-700 border-slate-200";
+  };
 
   const riskTone = (pct: number) => {
     const tier = getRiskTier(pct);
@@ -1043,6 +1053,7 @@ export default function ClaimsQueue() {
                     <th className="text-left p-4">Risk</th>
                     <th className="text-left p-4">Claim ID</th>
                     <th className="text-left p-4">Claimant</th>
+                    <th className="text-left p-4">Status</th>
                     <th className="text-left p-4">Policy</th>
                     <th className="text-left p-4">Incident</th>
                     <th className="text-right p-4">Claimed</th>
@@ -1074,6 +1085,11 @@ export default function ClaimsQueue() {
                         </td>
                         <td className="p-4 font-mono text-xs text-slate-700">
                           <div>{c.claim_id}</div>
+                          {c.source === "demo" && (
+                            <span className="inline-block mt-1 text-[9px] font-black uppercase tracking-wider text-violet-700 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded">
+                              Demo
+                            </span>
+                          )}
                           {c.source === "salesforce" && (
                             <span className="inline-block mt-1 text-[9px] font-black uppercase tracking-wider text-[#0176D3] bg-[#E8F4FD] border border-[#B4D9F5] px-1.5 py-0.5 rounded">
                               Salesforce
@@ -1081,6 +1097,18 @@ export default function ClaimsQueue() {
                           )}
                         </td>
                         <td className="p-4 font-medium">{c.claimant_name}</td>
+                        <td className="p-4">
+                          <span
+                            className={`inline-block text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-full border ${statusBadge(c.claim_status)}`}
+                          >
+                            {c.claim_status || "—"}
+                          </span>
+                          {c.action_status === "No action taken" && (
+                            <div className="text-[9px] text-amber-700 font-bold mt-1 uppercase tracking-wide">
+                              No action taken
+                            </div>
+                          )}
+                        </td>
                         <td className="p-4 text-slate-600">{c.policy_type}</td>
                         <td className="p-4 text-slate-600">{c.incident_type}</td>
                         <td className="p-4 text-right font-mono text-slate-700">
