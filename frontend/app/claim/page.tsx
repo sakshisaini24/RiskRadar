@@ -698,7 +698,7 @@ function RiskDashboard() {
                         <>
                           <div className={`text-4xl font-black ${color} mb-1`}>{bigNum}</div>
                           <div className="text-xs text-slate-600 leading-snug">{t.label}</div>
-                          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                          <div className="mt-3 grid grid-cols-2 gap-2 text-center">
                             <div className="p-2 bg-slate-50 rounded-lg">
                               <div className="text-[9px] text-slate-400 font-bold uppercase">
                                 Today
@@ -715,14 +715,6 @@ function RiskDashboard() {
                               </div>
                               <div className="text-xs font-black text-sky-700">
                                 Day {Math.round(t.predicted_escalation_day)}
-                              </div>
-                            </div>
-                            <div className="p-2 bg-slate-50 rounded-lg">
-                              <div className="text-[9px] text-slate-400 font-bold uppercase">
-                                R²
-                              </div>
-                              <div className="text-xs font-black text-slate-700">
-                                {t.holdout_r2 !== null ? t.holdout_r2.toFixed(2) : "—"}
                               </div>
                             </div>
                           </div>

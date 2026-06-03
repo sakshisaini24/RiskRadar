@@ -594,14 +594,9 @@ export default function ClaimsQueue() {
                   <h3 className="text-xl font-bold">Business Impact · ROI Calculator</h3>
                   <p className="text-xs text-emerald-200 mt-0.5">
                     Escalation-loss avoidance ($) plus adjuster hours returned (45→8 min
-                    workflow). Toggle planning mode for conservative 77% recall.
+                    workflow).
                   </p>
                 </div>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border bg-emerald-800/60 text-emerald-200 border-emerald-700">
-                  Threshold {sliderThreshold.toFixed(0)}%
-                </span>
               </div>
             </div>
 
