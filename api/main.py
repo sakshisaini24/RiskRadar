@@ -24,7 +24,14 @@ from api.risk_calibrator import calibrate_risk
 from api.time_to_escalation import predict_timeline, predict_timeline_from_features, model_stats as tte_stats
 from api.similar_claims import find_similar, find_similar_by_text, index_stats as sim_stats
 from api.fairness import compute as compute_fairness
-from api.feedback import FeedbackPayload, record as record_feedback, summary as feedback_summary, for_claim as feedback_for_claim
+from api.feedback import (
+    FeedbackPayload,
+    active_verdict,
+    for_claim as feedback_for_claim,
+    queue_score_after_verdict,
+    record as record_feedback,
+    summary as feedback_summary,
+)
 from api.drift import compute as compute_drift
 from api.external_claims import (
     combined_text,
@@ -392,7 +399,21 @@ async def fairness_endpoint(threshold: float = 50.0):
 @app.post("/feedback")
 async def feedback_submit(payload: FeedbackPayload):
     """Record an adjuster's agreement/disagreement with the model."""
-    return record_feedback(payload)
+    result = record_feedback(payload)
+    cid = str(payload.claim_id).strip()
+    if payload.model_score is not None and payload.verdict in (
+        "agree",
+        "disagree_too_high",
+        "disagree_too_low",
+    ):
+        adjusted = queue_score_after_verdict(payload.verdict, float(payload.model_score))
+        QUEUE_SCORE_CACHE[cid] = {
+            "risk_score_pct": round(adjusted, 2),
+            "is_high_risk": adjusted >= 60.0,
+            "feedback_adjusted": True,
+        }
+    PREDICT_CACHE.pop(cid, None)
+    return result
 
 
 @app.get("/feedback/summary")
@@ -402,8 +423,12 @@ async def feedback_summary_endpoint():
 
 
 @app.get("/feedback/claim/{claim_id}")
-async def feedback_for_claim_endpoint(claim_id: str):
-    return {"claim_id": claim_id, "events": feedback_for_claim(claim_id)}
+async def feedback_for_claim_endpoint(claim_id: str, current_score: Optional[float] = None):
+    return {
+        "claim_id": claim_id,
+        "events": feedback_for_claim(claim_id),
+        "active": active_verdict(claim_id, current_score),
+    }
 
 
 @app.get("/drift")
@@ -564,12 +589,19 @@ async def claims_list():
     }
 
 
+def _with_adjuster_verdict(response: Dict[str, Any]) -> Dict[str, Any]:
+    cid = str(response.get("claim_id", "")).strip()
+    score = (response.get("ml_analysis") or {}).get("risk_score_pct")
+    out = {**response, "adjuster_verdict": active_verdict(cid, score)}
+    return out
+
+
 @app.get("/predict/{claim_id}")
 async def get_prediction(claim_id: str):
     claim_id = str(claim_id).strip()
 
     if claim_id in PREDICT_CACHE:
-        return PREDICT_CACHE[claim_id]
+        return _with_adjuster_verdict(PREDICT_CACHE[claim_id])
 
     unstructured = get_unstructured_for_claim(claim_id)
     email_text = unstructured.get("email_transcript", "") if unstructured else ""
@@ -701,7 +733,7 @@ async def get_prediction(claim_id: str):
     }
 
     PREDICT_CACHE[claim_id] = response
-    return response
+    return _with_adjuster_verdict(response)
 
 
 @app.post("/cache/clear")

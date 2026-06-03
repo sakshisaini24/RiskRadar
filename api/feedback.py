@@ -19,6 +19,10 @@ DB_PATH = "data/feedback.db"
 
 FeedbackVerdict = Literal["agree", "disagree_too_high", "disagree_too_low", "note"]
 
+DECISIVE_VERDICTS = frozenset({"agree", "disagree_too_high", "disagree_too_low"})
+# Verdict stays locked while the displayed risk score is within this band (percentage points).
+SCORE_TOLERANCE = 0.15
+
 
 class FeedbackPayload(BaseModel):
     claim_id: str = Field(..., min_length=1)
@@ -114,3 +118,55 @@ def for_claim(claim_id: str, limit: int = 10) -> list:
             (claim_id, limit),
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+def latest_decisive(claim_id: str) -> Optional[dict]:
+    """Most recent agree / too-high / too-low verdict for this claim."""
+    for event in for_claim(claim_id, limit=30):
+        if event.get("verdict") in DECISIVE_VERDICTS:
+            return event
+    return None
+
+
+def score_changed_since_verdict(stored_score: Optional[float], current_score: Optional[float]) -> bool:
+    if stored_score is None or current_score is None:
+        return False
+    return abs(float(current_score) - float(stored_score)) > SCORE_TOLERANCE
+
+
+def active_verdict(claim_id: str, current_score: Optional[float] = None) -> dict:
+    """
+    Return the saved adjuster verdict for UI restore.
+    locked=True when the claim's risk score still matches the score at verdict time.
+    """
+    latest = latest_decisive(claim_id)
+    if not latest:
+        return {
+            "verdict": None,
+            "locked": False,
+            "stale": False,
+            "model_score_at_verdict": None,
+            "created_at": None,
+            "id": None,
+        }
+    stored = latest.get("model_score")
+    stale = score_changed_since_verdict(stored, current_score)
+    return {
+        "verdict": latest["verdict"],
+        "locked": not stale,
+        "stale": stale,
+        "model_score_at_verdict": stored,
+        "current_model_score": current_score,
+        "created_at": latest.get("created_at"),
+        "id": latest.get("id"),
+    }
+
+
+def queue_score_after_verdict(verdict: str, model_score: float) -> float:
+    """Optional display adjustment on triage queue after adjuster disagreement."""
+    score = float(model_score)
+    if verdict == "disagree_too_high":
+        return min(score, 49.9)
+    if verdict == "disagree_too_low":
+        return max(score, 60.0)
+    return score

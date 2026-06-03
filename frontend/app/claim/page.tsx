@@ -141,8 +141,19 @@ interface ClaimRecord {
   is_historical?: boolean;
 }
 
+interface AdjusterVerdict {
+  verdict: "agree" | "disagree_too_high" | "disagree_too_low" | null;
+  locked: boolean;
+  stale: boolean;
+  model_score_at_verdict?: number | null;
+  current_model_score?: number | null;
+  created_at?: string | null;
+  id?: number | null;
+}
+
 interface RiskData {
   claim_id: string;
+  adjuster_verdict?: AdjusterVerdict;
   source?: "dataset" | "salesforce" | "demo";
   salesforce_case_id?: string;
   salesforce_case_number?: string;
@@ -370,7 +381,31 @@ function RiskDashboard() {
     submitting: boolean;
     message: string | null;
     last: string | null;
-  }>({ submitting: false, message: null, last: null });
+    locked: boolean;
+    stale: boolean;
+  }>({ submitting: false, message: null, last: null, locked: false, stale: false });
+
+  const applySavedVerdict = (v?: AdjusterVerdict) => {
+    if (!v?.verdict) {
+      setFeedbackState((s) => ({
+        ...s,
+        last: null,
+        locked: false,
+        stale: false,
+        message: null,
+      }));
+      return;
+    }
+    setFeedbackState((s) => ({
+      ...s,
+      last: v.verdict,
+      locked: Boolean(v.locked),
+      stale: Boolean(v.stale),
+      message: v.stale
+        ? `Risk score changed (${v.model_score_at_verdict?.toFixed(1)}% → ${v.current_model_score?.toFixed(1)}%) — please confirm your verdict again.`
+        : `Saved verdict · recorded at ${v.model_score_at_verdict?.toFixed(1)}% risk`,
+    }));
+  };
 
   useEffect(() => {
     fetch(`${API_BASE}/metrics`)
@@ -390,6 +425,7 @@ function RiskDashboard() {
       const result: RiskData = await res.json();
       if (!result.legal_context.precedents) result.legal_context.precedents = [];
       setData(result);
+      applySavedVerdict(result.adjuster_verdict);
       const hasUS = result.legal_context.precedents.some((p) => p.jurisdiction?.toUpperCase() === "US");
       const hasIndia = result.legal_context.precedents.some((p) => p.jurisdiction?.toLowerCase() === "india");
       if (hasUS) setActiveRegion("US");
@@ -483,12 +519,23 @@ function RiskDashboard() {
       setFeedbackState({
         submitting: false,
         last: verdict,
-        message: `Saved · id=${body.id} · feeds nightly retrain queue`,
+        locked: true,
+        stale: false,
+        message: `Saved · id=${body.id} · locked until risk score changes`,
+      });
+      applySavedVerdict({
+        verdict,
+        locked: true,
+        stale: false,
+        model_score_at_verdict: data.ml_analysis.risk_score_pct,
+        current_model_score: data.ml_analysis.risk_score_pct,
       });
     } catch (err: any) {
       setFeedbackState({
         submitting: false,
         last: null,
+        locked: false,
+        stale: false,
         message: `Error: ${err.message}`,
       });
     }
@@ -717,49 +764,67 @@ function RiskDashboard() {
                     <h3 className="text-xs font-black uppercase tracking-widest text-slate-500">
                       👩‍💼 Adjuster Verdict
                     </h3>
-                    {feedbackState.last && (
+                    {feedbackState.last && feedbackState.locked && !feedbackState.stale && (
                       <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-                        ✓ Recorded
+                        ✓ Saved
+                      </span>
+                    )}
+                    {feedbackState.stale && (
+                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                        Score changed
                       </span>
                     )}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       onClick={() => submitFeedback("agree")}
-                      disabled={feedbackState.submitting}
+                      disabled={
+                        feedbackState.submitting ||
+                        (feedbackState.locked && !feedbackState.stale)
+                      }
                       className={`text-[10px] font-black uppercase py-2 rounded-lg border transition-all ${
                         feedbackState.last === "agree"
                           ? "bg-emerald-600 text-white border-emerald-600"
                           : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                      }`}
+                      } ${feedbackState.locked && !feedbackState.stale ? "opacity-90 cursor-default" : ""}`}
                     >
                       ✓ Agree
                     </button>
                     <button
                       onClick={() => submitFeedback("disagree_too_high")}
-                      disabled={feedbackState.submitting}
+                      disabled={
+                        feedbackState.submitting ||
+                        (feedbackState.locked && !feedbackState.stale)
+                      }
                       className={`text-[10px] font-black uppercase py-2 rounded-lg border transition-all ${
                         feedbackState.last === "disagree_too_high"
                           ? "bg-amber-600 text-white border-amber-600"
                           : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                      }`}
+                      } ${feedbackState.locked && !feedbackState.stale ? "opacity-90 cursor-default" : ""}`}
                     >
                       ↓ Too high
                     </button>
                     <button
                       onClick={() => submitFeedback("disagree_too_low")}
-                      disabled={feedbackState.submitting}
+                      disabled={
+                        feedbackState.submitting ||
+                        (feedbackState.locked && !feedbackState.stale)
+                      }
                       className={`text-[10px] font-black uppercase py-2 rounded-lg border transition-all ${
                         feedbackState.last === "disagree_too_low"
                           ? "bg-red-600 text-white border-red-600"
                           : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                      }`}
+                      } ${feedbackState.locked && !feedbackState.stale ? "opacity-90 cursor-default" : ""}`}
                     >
                       ↑ Too low
                     </button>
                   </div>
                   {feedbackState.message && (
-                    <p className="text-[10px] text-slate-500 mt-3 italic">
+                    <p
+                      className={`text-[10px] mt-3 italic ${
+                        feedbackState.stale ? "text-amber-700" : "text-slate-500"
+                      }`}
+                    >
                       {feedbackState.message}
                     </p>
                   )}
