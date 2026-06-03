@@ -54,6 +54,56 @@ def _load():
 _load()
 
 
+def _build_timeline_result(predicted_day: float, current_days_open: Optional[float]) -> dict:
+    predicted_day = max(1.0, predicted_day)
+    cur = current_days_open
+    days_remaining = (predicted_day - cur) if cur is not None else None
+    if days_remaining is not None:
+        days_remaining = round(days_remaining, 1)
+
+    mae = _META.get("holdout_mae_days", 0)
+
+    if days_remaining is None:
+        label = f"Similar profiles historically escalate around day {predicted_day:.0f}"
+    elif days_remaining <= 0:
+        label = (
+            f"Escalation risk window reached (historical median day {predicted_day:.0f}; "
+            f"claim is {cur:.0f} days old)"
+        )
+    elif days_remaining < 14:
+        label = f"Escalation likely within ~{int(round(days_remaining))} days (±{mae:.0f})"
+    else:
+        label = f"Expected escalation window: ~{int(round(days_remaining))} days (±{mae:.0f})"
+
+    return {
+        "predicted_escalation_day": round(predicted_day, 1),
+        "current_days_open": cur,
+        "days_remaining": days_remaining,
+        "mae_days": mae,
+        "holdout_r2": _META.get("holdout_r2"),
+        "label": label,
+        "n_training_claims": _META.get("n_train_escalated"),
+    }
+
+
+def predict_timeline_from_features(
+    feature_row: dict,
+    current_days_open: Optional[float] = None,
+) -> Optional[dict]:
+    """Forecast for Salesforce/demo claims using approximate Model A features."""
+    if _MODEL is None or not _META.get("feature_names"):
+        return None
+    features = _META["feature_names"]
+    X = pd.DataFrame([feature_row or {}]).reindex(columns=features, fill_value=0).astype(float)
+    try:
+        predicted_day = float(_MODEL.predict(X)[0])
+    except Exception as e:
+        print(f"[time_to_escalation] External predict failed: {e}")
+        return None
+    cur = float(current_days_open) if current_days_open is not None else None
+    return _build_timeline_result(predicted_day, cur)
+
+
 def predict_timeline(claim_id: str) -> Optional[dict]:
     """Return time-to-escalation forecast for a claim, or None if unavailable."""
     if _MODEL is None or _FEATURE_MATRIX is None:
@@ -72,40 +122,13 @@ def predict_timeline(claim_id: str) -> Optional[dict]:
         print(f"[time_to_escalation] Predict failed for {cid}: {e}")
         return None
 
-    predicted_day = max(1.0, predicted_day)
-
-    # Current days_open (if known) — derive days_remaining
     cur = None
     if _STRUCTURED is not None:
         match = _STRUCTURED[_STRUCTURED["claim_id"] == cid]
         if not match.empty:
             cur = float(match.iloc[0]["days_open"])
 
-    days_remaining = (predicted_day - cur) if cur is not None else None
-    if days_remaining is not None:
-        days_remaining = round(days_remaining, 1)
-
-    mae = _META.get("holdout_mae_days", 0)
-
-    # Build a human-readable label used by the UI
-    if days_remaining is None:
-        label = f"Similar profiles historically escalate around day {predicted_day:.0f}"
-    elif days_remaining <= 0:
-        label = f"Escalation risk window reached (historical median day {predicted_day:.0f}; claim is {cur:.0f} days old)"
-    elif days_remaining < 14:
-        label = f"Escalation likely within ~{int(round(days_remaining))} days (±{mae:.0f})"
-    else:
-        label = f"Expected escalation window: ~{int(round(days_remaining))} days (±{mae:.0f})"
-
-    return {
-        "predicted_escalation_day": round(predicted_day, 1),
-        "current_days_open": cur,
-        "days_remaining": days_remaining,
-        "mae_days": mae,
-        "holdout_r2": _META.get("holdout_r2"),
-        "label": label,
-        "n_training_claims": _META.get("n_train_escalated"),
-    }
+    return _build_timeline_result(predicted_day, cur)
 
 
 def model_stats() -> dict:

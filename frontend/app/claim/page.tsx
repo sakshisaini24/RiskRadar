@@ -559,11 +559,6 @@ function RiskDashboard() {
           <p className="text-slate-500 font-medium">
             Deep-dive risk intelligence for an individual claim
           </p>
-          {data?.source === "demo" && (
-            <div className="mt-2 inline-flex items-center gap-2 text-[11px] text-violet-700 bg-violet-50 border border-violet-200 rounded-full px-3 py-1 font-bold">
-              Demo · Open case
-            </div>
-          )}
           {data?.source === "salesforce" && (
             <div className="mt-2 inline-flex items-center gap-2 text-[11px] text-[#0176D3] bg-[#E8F4FD] border border-[#B4D9F5] rounded-full px-3 py-1 font-bold">
               Salesforce Case

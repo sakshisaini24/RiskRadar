@@ -21,8 +21,8 @@ from api.next_action import generate_emails
 from api.action_plan import generate_action_plan, extract_from_brief
 from api.consensus_analysis import analyze_consensus
 from api.risk_calibrator import calibrate_risk
-from api.time_to_escalation import predict_timeline, model_stats as tte_stats
-from api.similar_claims import find_similar, index_stats as sim_stats
+from api.time_to_escalation import predict_timeline, predict_timeline_from_features, model_stats as tte_stats
+from api.similar_claims import find_similar, find_similar_by_text, index_stats as sim_stats
 from api.fairness import compute as compute_fairness
 from api.feedback import FeedbackPayload, record as record_feedback, summary as feedback_summary, for_claim as feedback_for_claim
 from api.drift import compute as compute_drift
@@ -657,7 +657,17 @@ async def get_prediction(claim_id: str):
     # Forward-looking timing only for open cases (no final label) above risk threshold.
     if risk_pct >= TTE_RISK_THRESHOLD and not has_known_outcome:
         timeline = predict_timeline(claim_id)
+        if timeline is None and ext:
+            timeline = predict_timeline_from_features(
+                build_feature_row(ext),
+                current_days_open=float(ext.get("days_open") or 0),
+            )
+
     similar = find_similar(claim_id, top_k=5)
+    if similar is None:
+        sim_text = combined_text(ext) if ext else " ".join(p for p in (email_text, adjuster_text) if p)
+        if sim_text.strip():
+            similar = find_similar_by_text(sim_text, claim_id, top_k=5)
 
     response = {
         "claim_id": claim_id,
