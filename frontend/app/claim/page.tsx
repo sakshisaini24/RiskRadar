@@ -129,11 +129,21 @@ interface CalibrationInfo {
   final: number;
 }
 
+interface ClaimRecord {
+  target_outcome?: string | null;
+  payment_status?: string | null;
+  approved_amount?: number | null;
+  total_claimed?: number | null;
+  claimant_name?: string | null;
+  is_historical?: boolean;
+}
+
 interface RiskData {
   claim_id: string;
   source?: "dataset" | "salesforce";
   salesforce_case_id?: string;
   salesforce_case_number?: string;
+  claim_record?: ClaimRecord;
   ml_analysis: {
     claim_id: string;
     risk_score_pct: number;
@@ -609,6 +619,64 @@ function RiskDashboard() {
                     Risk Confidence Index
                   </p>
                 </div>
+
+                {/* CLAIM OUTCOME / PAYMENT (dataset history or open SF case) */}
+                {data.claim_record && (
+                  <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">
+                      Claim Status
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      {data.claim_record.target_outcome ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-500 text-xs">Historical outcome</span>
+                          <span
+                            className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${
+                              data.claim_record.target_outcome === "Escalated"
+                                ? "bg-red-100 text-red-800 border border-red-200"
+                                : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                            }`}
+                          >
+                            {data.claim_record.target_outcome}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-500 italic">
+                          Open case — final outcome not in dataset (e.g. Salesforce)
+                        </div>
+                      )}
+                      {data.claim_record.payment_status && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-500 text-xs">Payment status</span>
+                          <span className="text-xs font-bold text-slate-800">
+                            {data.claim_record.payment_status}
+                          </span>
+                        </div>
+                      )}
+                      {data.claim_record.approved_amount != null &&
+                        data.claim_record.approved_amount > 0 && (
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-slate-500 text-xs">Approved amount</span>
+                            <span className="text-xs font-bold text-slate-800">
+                              ${data.claim_record.approved_amount.toLocaleString(undefined, {
+                                maximumFractionDigits: 0,
+                              })}
+                            </span>
+                          </div>
+                        )}
+                      {data.claim_record.total_claimed != null && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-500 text-xs">Total claimed</span>
+                          <span className="text-xs font-bold text-slate-800">
+                            ${data.claim_record.total_claimed.toLocaleString(undefined, {
+                              maximumFractionDigits: 0,
+                            })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* ADJUSTER FEEDBACK */}
                 <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-200">

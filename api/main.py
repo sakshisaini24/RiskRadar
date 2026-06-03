@@ -42,6 +42,9 @@ from api.queue_scores import build_queue_score_cache
 
 load_dotenv()
 
+# Match frontend high-risk tier and calibrator is_high_risk (60%).
+TTE_RISK_THRESHOLD = 60.0
+
 app = FastAPI(title="RiskRadar AI API v2.0")
 
 app.add_middleware(
@@ -200,6 +203,48 @@ def get_unstructured_for_claim(claim_id):
         "adjuster_notes": clean(row.get("Adjuster Field Notes (Unstructured)")),
         "email_transcript": clean(row.get("Email Transcript — Claimant (Unstructured)")),
         "source": "dataset",
+    }
+
+
+def _build_claim_record(claim_id: str, ext: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Historical outcome + payment fields for dataset claims; sparse for Salesforce."""
+    if ext:
+        return {
+            "target_outcome": None,
+            "payment_status": None,
+            "approved_amount": ext.get("approved_amount"),
+            "total_claimed": ext.get("total_claimed"),
+            "claimant_name": ext.get("claimant_name"),
+            "is_historical": False,
+        }
+    if STRUCTURED_DATA.empty:
+        return {
+            "target_outcome": None,
+            "payment_status": None,
+            "approved_amount": None,
+            "total_claimed": None,
+            "claimant_name": None,
+            "is_historical": False,
+        }
+    match = STRUCTURED_DATA[STRUCTURED_DATA["claim_id"] == str(claim_id).strip()]
+    if match.empty:
+        return {
+            "target_outcome": None,
+            "payment_status": None,
+            "approved_amount": None,
+            "total_claimed": None,
+            "claimant_name": None,
+            "is_historical": False,
+        }
+    row = match.iloc[0]
+    approved = row.get("approved_amount")
+    return {
+        "target_outcome": str(row.get("target_outcome") or "").strip() or None,
+        "payment_status": str(row.get("payment_status") or "").strip() or None,
+        "approved_amount": float(approved) if pd.notna(approved) else None,
+        "total_claimed": float(row["total_claimed"]) if pd.notna(row.get("total_claimed")) else None,
+        "claimant_name": str(row.get("claimant_name") or "").strip() or None,
+        "is_historical": True,
     }
 
 
@@ -518,6 +563,7 @@ async def get_prediction(claim_id: str):
 
     incident = "insurance"
     ext = get_external_claim(claim_id)
+    claim_record = _build_claim_record(claim_id, ext)
     if ext:
         incident = str(ext.get("incident_type") or "insurance").strip("[]'\"")
     elif not STRUCTURED_DATA.empty:
@@ -585,7 +631,11 @@ async def get_prediction(claim_id: str):
         if fallback:
             recommended_actions = {"steps": fallback, "source": "brief"}
 
-    timeline = predict_timeline(claim_id)
+    outcome = (claim_record.get("target_outcome") or "").strip().lower()
+    is_resolved = outcome == "resolved"
+    timeline = None
+    if risk_pct >= TTE_RISK_THRESHOLD and not is_resolved:
+        timeline = predict_timeline(claim_id)
     similar = find_similar(claim_id, top_k=5)
 
     response = {
@@ -593,6 +643,7 @@ async def get_prediction(claim_id: str):
         "source": (unstructured or {}).get("source", "dataset"),
         "salesforce_case_id": (unstructured or {}).get("salesforce_case_id"),
         "salesforce_case_number": (unstructured or {}).get("salesforce_case_number"),
+        "claim_record": claim_record,
         "ml_analysis": results,
         "timeline": timeline,
         "similar_claims": similar,
