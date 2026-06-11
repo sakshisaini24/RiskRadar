@@ -67,33 +67,83 @@ frontend/ Next.js 16        /           Triage Queue + Honest Perf Card
 | Frontend | Next.js 16, React 19, Tailwind CSS 4, ReactMarkdown |
 | Persistence | SQLite (feedback log), .joblib / .json (model artifacts) |
 
----
+## Steps to Build
+Prerequisites
+| Tool | Version |
+|---|---|
+| Python |	3.11+ |
+| Node.js | 20+ |
+| npm	 | comes with Node |
 
-## Run it
 
-```bash
-# 1. Python env + deps
-python -m venv venv && ./venv/Scripts/activate  # Windows
+Option A — Quick local run (fastest)
+The repo includes trained models and data artifacts, so you usually don’t need to retrain.
+
+1. Clone
+
+git clone https://github.com/sakshisaini24/RiskRadar.git
+cd RiskRadar
+
+2. Backend (API)
+
+# Windows
+python -m venv venv
+venv\Scripts\activate
+# macOS/Linux
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Rebuild pipeline + models
-py run_pipeline.py
-py -m models.train_model_a       # saves holdout_claim_ids.csv
-py -m models.train_model_b       # reuses same holdout
-py -m models.fit_calibrator      # isotonic calibrator
-py -m models.train_time_to_escalation
-py -m models.build_claim_index   # ~30s for 550 claims
-py -m models.evaluate            # writes data/features/eval/*.png
+3. Environment (optional)
 
-# 3. API
-py -m uvicorn api.main:app --host 127.0.0.1 --port 8000
+copy .env.example .env    # Windows
+# cp .env.example .env    # macOS/Linux
+Edit .env if you want AI briefs or Salesforce:
 
-# 4. Frontend (separate shell)
-cd frontend && npm install && npm run dev
-# open http://localhost:3000
-```
+GROQ_API_KEY — recommended for LLM briefs
+GEMINI_API_KEY — optional (or set GEMINI_ENABLED=false)
+SALESFORCE_WEBHOOK_SECRET — only if using Salesforce integration
 
-Set `GEMINI_API_KEY` and `GROQ_API_KEY` in `.env` to enable LLM briefs.
-Leave blank and the UI gracefully skips those panels.
+4. Start API
 
----
+python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
+API docs: http://127.0.0.1:8000/docs
+
+5. Frontend (new terminal)
+
+cd frontend
+npm install
+npm run dev
+Open: http://localhost:3000
+
+The frontend talks to the API at http://127.0.0.1:8000 by default.
+
+Option B — Full rebuild (retrain models from data)
+
+
+pip install -r requirements.txt
+python run_pipeline.py
+python -m models.train_model_a
+python -m models.train_model_b
+python -m models.fit_calibrator
+python -m models.train_time_to_escalation
+python -m models.build_claim_index    # ~30s
+python -m models.evaluate
+Then start API + frontend as in Option A.
+
+Option C — Docker (API + frontend in one container)
+
+git clone https://github.com/sakshisaini24/RiskRadar.git
+cd RiskRadar
+docker build -f DockerFile -t riskradar .
+docker run -p 8080:8080 --env-file .env riskradar
+Open: http://localhost:8080
+
+Live demo (hosted)
+https://riskradar-2-mjr7.onrender.com
+
+(Render free tier may sleep; first load can take ~30s.)
+
+You can paste this as-is into email/Slack. If you want a shorter “3-step” version for judges, say the word and I’ll trim it.
+
+
