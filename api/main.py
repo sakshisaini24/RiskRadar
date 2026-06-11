@@ -43,7 +43,10 @@ from api.demo_claims import seed_demo_claims
 from api.sf_scoring import build_feature_row
 from api.integrations.salesforce import (
     ingest_from_webhook,
+    oauth_configured,
     pull_open_cases,
+    restore_open_cases_on_startup,
+    should_sync_on_startup,
     verify_webhook_secret,
 )
 from api.queue_scores import build_queue_score_cache
@@ -173,15 +176,18 @@ async def _startup():
     _warm_queue_cache()
     threading.Thread(target=_compute_metrics_background, daemon=True).start()
 
-    if os.getenv("SF_SYNC_ON_STARTUP", "").lower() in ("1", "true", "yes"):
-        try:
-            ids, err = pull_open_cases(limit=int(os.getenv("SF_SYNC_LIMIT", "25")))
-            if err:
-                print(f"[startup] SF sync skipped: {err}")
-            else:
-                print(f"[startup] SF sync restored {len(ids)} open case(s)")
-        except Exception as e:
-            print(f"[startup] SF sync failed: {e}")
+    try:
+        n_sf, err = restore_open_cases_on_startup(limit=int(os.getenv("SF_SYNC_LIMIT", "25")))
+        if err:
+            print(f"[startup] SF restore skipped: {err}")
+        elif n_sf:
+            QUEUE_SCORE_CACHE.clear()
+            _warm_queue_cache()
+            print(f"[startup] SF restore re-ingested {n_sf} open case(s) into triage queue")
+        elif oauth_configured():
+            print("[startup] SF restore: no open cases returned from Salesforce")
+    except Exception as e:
+        print(f"[startup] SF restore failed: {e}")
 
 
 def get_unstructured_for_claim(claim_id):
@@ -515,10 +521,16 @@ async def salesforce_sync(limit: int = 20):
 @app.get("/integrations/salesforce/status")
 async def salesforce_status():
     ext = list_external_claims()
+    from api.external_claims import STORE_PATH
+
+    sf_claims = [c for c in ext if not str(c.get("claim_id", "")).startswith("SF-DEMO-")]
     return {
         "external_claim_count": len(ext),
+        "salesforce_claim_count": len(sf_claims),
+        "store_path": STORE_PATH,
         "webhook_secret_configured": bool(os.getenv("SALESFORCE_WEBHOOK_SECRET")),
-        "oauth_configured": bool(os.getenv("SF_REFRESH_TOKEN")),
+        "oauth_configured": oauth_configured(),
+        "sync_on_startup": should_sync_on_startup(),
         "recent": [
             {
                 "claim_id": c["claim_id"],

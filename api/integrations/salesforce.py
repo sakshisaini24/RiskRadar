@@ -87,6 +87,26 @@ def ingest_from_webhook(body: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def oauth_configured() -> bool:
+    """True when REST pull from Salesforce is possible."""
+    return bool(
+        os.getenv("SF_INSTANCE_URL", "").strip()
+        and os.getenv("SF_CLIENT_ID", "").strip()
+        and os.getenv("SF_CLIENT_SECRET", "").strip()
+        and os.getenv("SF_REFRESH_TOKEN", "").strip()
+    )
+
+
+def should_sync_on_startup() -> bool:
+    """Default: sync on startup when OAuth is configured (Render disk is ephemeral)."""
+    flag = os.getenv("SF_SYNC_ON_STARTUP", "").strip().lower()
+    if flag in ("0", "false", "no"):
+        return False
+    if flag in ("1", "true", "yes"):
+        return True
+    return oauth_configured()
+
+
 def _sf_token() -> Optional[str]:
     url = os.getenv("SF_INSTANCE_URL", "").rstrip("/")
     client_id = os.getenv("SF_CLIENT_ID")
@@ -108,39 +128,122 @@ def _sf_token() -> Optional[str]:
     return resp.json().get("access_token")
 
 
+def _case_record_to_payload(case: Dict[str, Any]) -> Dict[str, Any]:
+    """Map Salesforce REST Case row → same shape as Apex webhook payload."""
+    contact = case.get("Contact") or {}
+    created = case.get("CreatedDate") or ""
+    days_open = 0
+    if created:
+        try:
+            from datetime import datetime, timezone
+
+            created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            days_open = max(0, (datetime.now(timezone.utc) - created_dt).days)
+        except Exception:
+            days_open = 0
+
+    claimant_age = None
+    birth = contact.get("Birthdate")
+    if birth:
+        try:
+            from datetime import date, datetime
+
+            if isinstance(birth, str):
+                bdt = datetime.strptime(birth[:10], "%Y-%m-%d").date()
+            else:
+                bdt = birth
+            claimant_age = max(0, (date.today() - bdt).days // 365)
+        except Exception:
+            claimant_age = None
+
+    return {
+        "claim_id": f"SF-{case.get('CaseNumber') or case['Id']}",
+        "salesforce_case_id": case["Id"],
+        "salesforce_case_number": case.get("CaseNumber"),
+        "claimant_name": contact.get("Name") or case.get("Subject") or "Salesforce Case",
+        "age": claimant_age,
+        "incident_description": case.get("Description") or "",
+        "policy_type": case.get("Policy_Type__c"),
+        "incident_type": case.get("Type") or case.get("Reason") or "insurance",
+        "injury_severity": case.get("Injury_Severity__c"),
+        "state": contact.get("MailingState") or "",
+        "days_open": days_open,
+        "total_claimed": case.get("Total_Claimed__c"),
+        "insurer_offer": case.get("Insurer_Offer__c"),
+        "policy_tenure_yrs": case.get("Policy_Tenure_Yrs__c"),
+        "followup_contacts": case.get("Followup_Contacts__c"),
+        "doc_requests": case.get("Doc_Requests__c"),
+        "disputed_items": case.get("Disputed_Items__c"),
+        "inspections": case.get("Inspections__c"),
+        "legal_rep": case.get("Legal_Rep__c"),
+        "adjuster_level": case.get("Adjuster_Level__c"),
+        "payment_status": case.get("Payment_Status__c"),
+        "doi_complaint": 1 if case.get("DOI_Complaint__c") is True else 0,
+        "claim_status": "Open",
+        "activities": [],
+    }
+
+
+def _pull_soql_variants(limit: int) -> List[str]:
+    lim = int(limit)
+    full = (
+        "SELECT Id, CaseNumber, Subject, Description, Type, Reason, CreatedDate, "
+        "Contact.Name, Contact.MailingState, Contact.Birthdate, "
+        "Policy_Type__c, Total_Claimed__c, Insurer_Offer__c, "
+        "Injury_Severity__c, Followup_Contacts__c, Doc_Requests__c, "
+        "Disputed_Items__c, Inspections__c, Legal_Rep__c, "
+        "Adjuster_Level__c, Payment_Status__c, DOI_Complaint__c, "
+        "Policy_Tenure_Yrs__c "
+        f"FROM Case WHERE IsClosed = false ORDER BY LastModifiedDate DESC LIMIT {lim}"
+    )
+    minimal = (
+        "SELECT Id, CaseNumber, Subject, Description, Type, Reason, CreatedDate, "
+        "Contact.Name, Contact.MailingState "
+        f"FROM Case WHERE IsClosed = false ORDER BY LastModifiedDate DESC LIMIT {lim}"
+    )
+    return [full, minimal]
+
+
 def pull_open_cases(limit: int = 20) -> Tuple[List[str], Optional[str]]:
-    """Optional REST pull when Flow is not ready."""
+    """Re-pull open Cases from Salesforce (restores queue after Render restarts)."""
     base = os.getenv("SF_INSTANCE_URL", "").rstrip("/")
     token = _sf_token()
     if not token:
         return [], "SF OAuth not configured (SF_INSTANCE_URL, SF_CLIENT_ID, SF_CLIENT_SECRET, SF_REFRESH_TOKEN)"
 
-    soql = (
-        "SELECT Id, CaseNumber, Subject, Description, Type, Reason, "
-        "Contact.Name, Contact.MailingState "
-        f"FROM Case WHERE IsClosed = false ORDER BY CreatedDate DESC LIMIT {int(limit)}"
-    )
     headers = {"Authorization": f"Bearer {token}"}
-    r = requests.get(
-        f"{base}/services/data/v59.0/query",
-        params={"q": soql},
-        headers=headers,
-        timeout=20,
-    )
-    r.raise_for_status()
-    ingested = []
-    for case in r.json().get("records") or []:
-        contact = case.get("Contact") or {}
-        payload = {
-            "claim_id": f"SF-{case.get('CaseNumber') or case['Id']}",
-            "salesforce_case_id": case["Id"],
-            "salesforce_case_number": case.get("CaseNumber"),
-            "claimant_name": contact.get("Name") or case.get("Subject"),
-            "incident_description": case.get("Description") or "",
-            "incident_type": case.get("Type") or case.get("Reason") or "insurance",
-            "state": contact.get("MailingState") or "",
-            "activities": [],
-        }
-        ingest_from_webhook(payload)
-        ingested.append(payload["claim_id"])
-    return ingested, None
+    last_err = None
+    for soql in _pull_soql_variants(limit):
+        try:
+            r = requests.get(
+                f"{base}/services/data/v59.0/query",
+                params={"q": soql},
+                headers=headers,
+                timeout=20,
+            )
+            if r.status_code != 200:
+                last_err = f"HTTP {r.status_code}: {r.text[:200]}"
+                if "INVALID_FIELD" in r.text or "No such column" in r.text:
+                    continue
+                r.raise_for_status()
+            ingested = []
+            for case in r.json().get("records") or []:
+                payload = _case_record_to_payload(case)
+                ingest_from_webhook(payload)
+                ingested.append(payload["claim_id"])
+            return ingested, None
+        except Exception as e:
+            last_err = str(e)
+            continue
+    return [], last_err or "SOQL query failed"
+
+
+def restore_open_cases_on_startup(limit: int = 25) -> Tuple[int, Optional[str]]:
+    """
+    Re-ingest open Salesforce Cases after API restart.
+    Render/local ephemeral disks wipe external_claims_store.json on redeploy.
+    """
+    if not should_sync_on_startup() or not oauth_configured():
+        return 0, None
+    ids, err = pull_open_cases(limit=limit)
+    return len(ids), err

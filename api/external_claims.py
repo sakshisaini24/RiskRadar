@@ -157,6 +157,8 @@ def upsert(payload: Dict[str, Any]) -> Dict[str, Any]:
     activities = payload.get("activities") or []
     now = datetime.now(timezone.utc).isoformat()
 
+    existing = _STORE.get(claim_id) or {}
+
     row = {
         "claim_id": claim_id,
         "salesforce_case_id": str(
@@ -205,6 +207,13 @@ def upsert(payload: Dict[str, Any]) -> Dict[str, Any]:
         "activities": activities,
         "updated_at": now,
     }
+
+    # Keep richer webhook payloads when a lighter REST re-sync omits text/activities.
+    for field in ("email_transcript", "adjuster_notes", "incident_description"):
+        if not str(row.get(field) or "").strip() and str(existing.get(field) or "").strip():
+            row[field] = existing[field]
+    if not row.get("activities") and existing.get("activities"):
+        row["activities"] = existing["activities"]
 
     _STORE[claim_id] = row
     _save_json_store()
